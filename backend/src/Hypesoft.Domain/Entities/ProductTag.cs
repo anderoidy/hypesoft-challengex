@@ -1,4 +1,6 @@
 using Hypesoft.Domain.Common;
+using Hypesoft.Domain.Exceptions;
+
 
 namespace Hypesoft.Domain.Entities;
 

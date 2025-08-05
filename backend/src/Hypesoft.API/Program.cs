@@ -1,6 +1,19 @@
-using Hypesoft.API.Extensions;
+using Hypesoft.Application;
+using Hypesoft.Infrastructure;
+using Hypesoft.Domain.Exceptions;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configuração do MediatR
+builder.Services.AddMediatR(cfg => 
+    cfg.RegisterServicesFromAssembly(typeof(Application.DependencyInjection).Assembly));
+
+// Configuração do AutoMapper
+builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+// Registrar serviços das camadas Application e Infrastructure
+builder.Services.AddApplicationServices();
+builder.Services.AddInfrastructureServices(builder.Configuration);
 
 // Adiciona serviços ao container.
 builder.Services.AddControllers();
@@ -49,13 +62,10 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Configuração do Keycloak
-builder.Services.AddKeycloakAuthentication(builder.Configuration);
-
 // Configuração do Health Check
 builder.Services.AddHealthChecks()
     .AddMongoDb(
-        mongodbConnectionString: builder.Configuration.GetConnectionString("MongoDB"),
+        mongodbConnectionString: builder.Configuration.GetConnectionString("MongoDB") ?? "mongodb://localhost:27017",
         name: "mongodb",
         tags: new[] { "ready" });
 
@@ -75,14 +85,15 @@ app.UseHttpsRedirection();
 
 app.UseCors("AllowAll");
 
-// Adiciona autenticação e autorização
-app.UseKeycloakAuthentication();
+// Autenticação e autorização (comentado até configurar Keycloak)
+// app.UseAuthentication();
+// app.UseAuthorization();
 
 app.MapControllers();
 
 // Configuração dos endpoints de health check
 app.MapHealthChecks("/health");
-app.MapHealthChecks("/health/ready", new()
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     Predicate = (check) => check.Tags.Contains("ready")
 });

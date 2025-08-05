@@ -3,9 +3,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 import { ThemeProvider as NextThemesProvider } from "next-themes"
-import { type ThemeProviderProps } from "next-themes/dist/types"
+import { ThemeProviderProps } from "next-themes/dist/types"
+import { Toast } from "@/components/ui/toaster"
 
-import { Toast } from "@/components/ui/toast"
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,7 +31,7 @@ export function Providers({ children, ...props }: ThemeProviderProps) {
       >
         {children}
         <Toast />
-        <ReactQueryDevtools initialIsOpen={false} position="bottom-right" />
+        <ReactQueryDevtools initialIsOpen={false} position="bottom-right" asChild={false} />
       </NextThemesProvider>
     </QueryClientProvider>
   )

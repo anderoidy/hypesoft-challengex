@@ -1,12 +1,11 @@
+import React, { ReactNode, useState, useEffect } from 'react';
 import { Inter } from 'next/font/google';
-import React, { type ReactNode, useEffect,useState } from 'react';
-
-import { Toast } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
-
-import { Footer } from './Footer';
-import { Header } from './Header';
 import { Sidebar } from './Sidebar';
+import { Header } from './Header';
+import { Footer } from './Footer';
+import { Toast } from '@/components/ui/toaster';
+
 
 const inter = Inter({ 
   subsets: ['latin'],

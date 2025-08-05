@@ -1,10 +1,8 @@
 import './globals.css';
-
-import { Inter, Roboto_Mono } from 'next/font/google';
-
-import { ThemeProvider } from '@/components/theme-provider';
-import { Toaster } from '@/components/ui/toaster';
 import type { Metadata } from 'next';
+import { Inter, Roboto_Mono } from 'next/font/google';
+import { ThemeProvider } from '@/components/theme-provider';
+import { Toast } from '@/components/ui/toaster';
 
 // Configuração de fontes
 const inter = Inter({
@@ -50,7 +48,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
-          <Toaster />
+          <Toast />
         </ThemeProvider>
       </body>
     </html>
