@@ -1,0 +1,40 @@
+# .NET
+**/bin/
+**/obj/
+**/*.user
+**/*.suo
+.vscode/
+*.sln.docstates
+
+# Node.js / Next.js
+**/node_modules/
+**/.next/
+**/dist/
+**/out/
+
+# Logs
+**/*.log
+**/logs/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Docker
+**/docker-compose.override.yml
+**/*.local.yml
+**/Dockerfile.local
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Certs
+**/*.pem
+**/*.crt
+**/*.key
+**/*.pfx
+
+# Exportações Keycloak (se você quiser ignorar)
+**/realm-export.json
