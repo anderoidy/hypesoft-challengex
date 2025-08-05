@@ -1,97 +1,134 @@
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
 export const theme = {
+  // Color palette
   colors: {
-    // Primary colors
     primary: {
-      50: '#f0f9ff',
-      100: '#e0f2fe',
-      200: '#bae6fd',
-      300: '#7dd3fc',
-      400: '#38bdf8',
-      500: '#0ea5e9',
-      600: '#0284c7',
-      700: '#0369a1',
-      800: '#075985',
-      900: '#0c4a6e',
+      DEFAULT: 'hsl(222.2 47.4% 11.2%)',
+      foreground: 'hsl(210 40% 98%)',
+      light: 'hsl(222.2 47.4% 20%)',
+      dark: 'hsl(222.2 47.4% 5%)',
     },
-    // Secondary colors
     secondary: {
-      50: '#f5f3ff',
-      100: '#ede9fe',
-      200: '#ddd6fe',
-      300: '#c4b5fd',
-      400: '#a78bfa',
-      500: '#8b5cf6',
-      600: '#7c3aed',
-      700: '#6d28d9',
-      800: '#5b21b6',
-      900: '#4c1d95',
+      DEFAULT: 'hsl(210 40% 96.1%)',
+      foreground: 'hsl(222.2 47.4% 11.2%)',
+      light: 'hsl(210 40% 98%)',
+      dark: 'hsl(210 40% 90%)',
     },
-    // Success
+    accent: {
+      DEFAULT: 'hsl(217.2 91.2% 59.8%)',
+      foreground: 'hsl(210 40% 98%)',
+      light: 'hsl(217.2 91.2% 70%)',
+      dark: 'hsl(217.2 91.2% 50%)',
+    },
+    destructive: {
+      DEFAULT: 'hsl(0 84.2% 60.2%)',
+      foreground: 'hsl(210 40% 98%)',
+    },
     success: {
-      50: '#f0fdf4',
-      500: '#10b981',
-      600: '#059669',
+      DEFAULT: 'hsl(142.1 76.2% 36.3%)',
+      foreground: 'hsl(210 40% 98%)',
     },
-    // Warning
     warning: {
-      50: '#fffbeb',
-      500: '#f59e0b',
-      600: '#d97706',
+      DEFAULT: 'hsl(38 92% 50%)',
+      foreground: 'hsl(0 0% 100%)',
     },
-    // Error
-    error: {
-      50: '#fef2f2',
-      500: '#ef4444',
-      600: '#dc2626',
+    info: {
+      DEFAULT: 'hsl(199 89% 48%)',
+      foreground: 'hsl(0 0% 100%)',
     },
-    // Grayscale
-    gray: {
-      50: '#f9fafb',
-      100: '#f3f4f6',
-      200: '#e5e7eb',
-      300: '#d1d5db',
-      400: '#9ca3af',
-      500: '#6b7280',
-      600: '#4b5563',
-      700: '#374151',
-      800: '#1f2937',
-      900: '#111827',
+    muted: {
+      DEFAULT: 'hsl(210 40% 96.1%)',
+      foreground: 'hsl(215.4 16.3% 46.9%)',
     },
-    // Backgrounds
-    background: {
-      light: '#ffffff',
-      dark: '#0f172a',
-      paper: '#ffffff',
+    border: 'hsl(214.3 31.8% 91.4%)',
+    input: 'hsl(214.3 31.8% 91.4%)',
+    ring: 'hsl(217.2 91.2% 59.8%)',
+    background: 'hsl(0 0% 100%)',
+    foreground: 'hsl(222.2 47.4% 11.2%)',
+    card: {
+      DEFAULT: 'hsl(0 0% 100%)',
+      foreground: 'hsl(222.2 47.4% 11.2%)',
     },
   },
-  shadows: {
-    sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
-    DEFAULT: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-    md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-    lg: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
-    xl: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-    '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
-    inner: 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
-    none: 'none',
+  
+  // Dark mode colors
+  dark: {
+    colors: {
+      primary: {
+        DEFAULT: 'hsl(210 40% 98%)',
+        foreground: 'hsl(222.2 47.4% 11.2%)',
+        light: 'hsl(210 40% 90%)',
+        dark: 'hsl(210 40% 85%)',
+      },
+      secondary: {
+        DEFAULT: 'hsl(222.2 47.4% 11.2%)',
+        foreground: 'hsl(210 40% 98%)',
+        light: 'hsl(222.2 47.4% 15%)',
+        dark: 'hsl(222.2 47.4% 5%)',
+      },
+      accent: {
+        DEFAULT: 'hsl(217.2 91.2% 70%)',
+        foreground: 'hsl(0 0% 100%)',
+        light: 'hsl(217.2 91.2% 80%)',
+        dark: 'hsl(217.2 91.2% 50%)',
+      },
+      destructive: {
+        DEFAULT: 'hsl(0 84.2% 60.2%)',
+        foreground: 'hsl(210 40% 98%)',
+      },
+      success: {
+        DEFAULT: 'hsl(142.1 76.2% 36.3%)',
+        foreground: 'hsl(210 40% 98%)',
+      },
+      warning: {
+        DEFAULT: 'hsl(38 92% 50%)',
+        foreground: 'hsl(0 0% 100%)',
+      },
+      info: {
+        DEFAULT: 'hsl(199 89% 48%)',
+        foreground: 'hsl(0 0% 100%)',
+      },
+      muted: {
+        DEFAULT: 'hsl(217.2 32.6% 17.5%)',
+        foreground: 'hsl(215 20.2% 65.1%)',
+      },
+      border: 'hsl(217.2 32.6% 17.5%)',
+      input: 'hsl(217.2 32.6% 17.5%)',
+      ring: 'hsl(217.2 91.2% 59.8%)',
+      background: 'hsl(222.2 47.4% 5%)',
+      foreground: 'hsl(210 40% 98%)',
+      card: {
+        DEFAULT: 'hsl(222.2 47.4% 11.2%)',
+        foreground: 'hsl(210 40% 98%)',
+      },
+    },
   },
+
+  // Typography
   typography: {
     fontFamily: {
-      sans: ['Inter', 'sans-serif'],
-      mono: ['Roboto Mono', 'monospace'],
+      sans: ['var(--font-sans)', 'sans-serif'],
+      mono: ['var(--font-mono)', 'monospace'],
     },
     fontSize: {
-      xs: '0.75rem',     // 12px
-      sm: '0.875rem',    // 14px
-      base: '1rem',      // 16px
-      lg: '1.125rem',    // 18px
-      xl: '1.25rem',     // 20px
-      '2xl': '1.5rem',   // 24px
-      '3xl': '1.875rem', // 30px
-      '4xl': '2.25rem',  // 36px
-      '5xl': '3rem',     // 48px
+      xs: '0.75rem',
+      sm: '0.875rem',
+      base: '1rem',
+      lg: '1.125rem',
+      xl: '1.25rem',
+      '2xl': '1.5rem',
+      '3xl': '1.875rem',
+      '4xl': '2.25rem',
+      '5xl': '3rem',
+      '6xl': '3.75rem',
     },
     fontWeight: {
-      light: '300',
       normal: '400',
       medium: '500',
       semibold: '600',
@@ -105,15 +142,9 @@ export const theme = {
       relaxed: '1.625',
       loose: '2',
     },
-    letterSpacing: {
-      tighter: '-0.05em',
-      tight: '-0.025em',
-      normal: '0',
-      wide: '0.025em',
-      wider: '0.05em',
-      widest: '0.1em',
-    },
   },
+
+  // Spacing
   spacing: {
     px: '1px',
     0: '0',
@@ -151,6 +182,8 @@ export const theme = {
     80: '20rem',
     96: '24rem',
   },
+
+  // Border radius
   borderRadius: {
     none: '0',
     sm: '0.125rem',
@@ -162,6 +195,20 @@ export const theme = {
     '3xl': '1.5rem',
     full: '9999px',
   },
+
+  // Box shadow
+  boxShadow: {
+    sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+    DEFAULT: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+    md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+    lg: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+    xl: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+    '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+    inner: 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
+    none: 'none',
+  },
+
+  // Z-index
   zIndex: {
     auto: 'auto',
     0: '0',
@@ -171,20 +218,60 @@ export const theme = {
     40: '40',
     50: '50',
   },
+
+  // Transitions
   transition: {
     DEFAULT: 'all 0.2s ease-in-out',
-    colors: 'background-color, border-color, color, fill, stroke, opacity, box-shadow, transform',
+    colors: 'color, background-color, border-color, text-decoration-color, fill, stroke 0.2s ease-in-out',
     opacity: 'opacity 0.2s ease-in-out',
     shadow: 'box-shadow 0.2s ease-in-out',
     transform: 'transform 0.2s ease-in-out',
   },
-  breakpoints: {
+
+  // Breakpoints
+  screens: {
     sm: '640px',
     md: '768px',
     lg: '1024px',
     xl: '1280px',
     '2xl': '1536px',
   },
+
+  // Container
+  container: {
+    center: true,
+    padding: '2rem',
+    screens: {
+      sm: '640px',
+      md: '768px',
+      lg: '1024px',
+      xl: '1280px',
+      '2xl': '1400px',
+    },
+  },
 } as const;
 
 export type Theme = typeof theme;
+
+export function getThemeColor(theme: 'light' | 'dark', colorPath: string) {
+  const path = colorPath.split('.');
+  let current: any = theme === 'dark' ? theme.dark.colors : theme.colors;
+  
+  for (const key of path) {
+    if (current[key] === undefined) {
+      console.warn(`Color '${colorPath}' not found in theme`);
+      return 'currentColor';
+    }
+    current = current[key];
+  }
+  
+  return current;
+}
+
+export function getTextColor(theme: 'light' | 'dark') {
+  return theme === 'dark' ? theme.dark.colors.foreground : theme.colors.foreground;
+}
+
+export function getBackgroundColor(theme: 'light' | 'dark') {
+  return theme === 'dark' ? theme.dark.colors.background : theme.colors.background;
+}
