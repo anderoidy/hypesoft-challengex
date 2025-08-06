@@ -1,4 +1,4 @@
-import { Html, Head, Main, NextScript } from 'next/document';
+import { Head, Html, Main, NextScript } from 'next/document';
 
 export default function Document() {
   return (
@@ -15,7 +15,7 @@ export default function Document() {
           rel="stylesheet"
         />
       </Head>
-      <body className="antialiased text-gray-900 bg-gray-50">
+      <body className="bg-gray-50 text-gray-900 antialiased">
         <Main />
         <NextScript />
       </body>

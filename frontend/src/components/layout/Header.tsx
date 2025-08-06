@@ -1,17 +1,17 @@
+import { useTheme } from 'next-themes';
 import React from 'react';
 import { 
-  FiMenu, 
-  FiSearch, 
   FiBell, 
-  FiUser, 
-  FiChevronDown, 
+  FiLogOut,
+  FiMenu, 
   FiMoon, 
-  FiSun,
+  FiSearch, 
   FiSettings,
-  FiLogOut
-} from 'react-icons/fi';
+  FiSun,
+  FiUser} from 'react-icons/fi';
+
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,9 +20,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useTheme } from 'next-themes';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/theme';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -58,7 +57,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, className }) => {
           onClick={onMenuClick}
           aria-label="Toggle menu"
         >
-          <FiMenu className="h-5 w-5" />
+          <FiMenu className="size-5" />
         </Button>
       </div>
 
@@ -66,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, className }) => {
         {/* Search Bar */}
         <div className="relative flex-1 md:max-w-md">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <FiSearch className="h-4 w-4 text-muted-foreground" />
+            <FiSearch className="size-4 text-muted-foreground" />
           </div>
           <Input
             type="search"
@@ -84,26 +83,26 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, className }) => {
             aria-label="Toggle theme"
           >
             {isMounted && theme === 'dark' ? (
-              <FiSun className="h-5 w-5" />
+              <FiSun className="size-5" />
             ) : (
-              <FiMoon className="h-5 w-5" />
+              <FiMoon className="size-5" />
             )}
           </Button>
 
           {/* Notifications */}
           <Button variant="ghost" size="icon" className="relative">
-            <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary"></div>
-            <FiBell className="h-5 w-5" />
+            <div className="absolute right-2 top-2 size-2 rounded-full bg-primary"></div>
+            <FiBell className="size-5" />
           </Button>
 
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-10 w-10 rounded-full p-0">
-                <Avatar className="h-8 w-8">
+              <Button variant="ghost" className="size-10 rounded-full p-0">
+                <Avatar className="size-8">
                   <AvatarImage src="/avatars/01.png" alt="User" />
                   <AvatarFallback className="bg-primary text-primary-foreground">
-                    <FiUser className="h-4 w-4" />
+                    <FiUser className="size-4" />
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -119,16 +118,16 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, className }) => {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="cursor-pointer">
-                <FiUser className="mr-2 h-4 w-4" />
+                <FiUser className="mr-2 size-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer">
-                <FiSettings className="mr-2 h-4 w-4" />
+                <FiSettings className="mr-2 size-4" />
                 <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="cursor-pointer text-destructive">
-                <FiLogOut className="mr-2 h-4 w-4" />
+                <FiLogOut className="mr-2 size-4" />
                 <span>Log out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>

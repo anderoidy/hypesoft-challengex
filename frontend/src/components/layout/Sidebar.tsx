@@ -1,25 +1,26 @@
-import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import React from 'react';
 import {
-  FiHome,
-  FiShoppingBag,
-  FiUsers,
-  FiSettings,
+  FiBox,
   FiChevronDown,
   FiChevronRight,
-  FiBox,
-  FiPieChart,
-  FiTag,
   FiFileText,
-  FiLogOut,
-  FiUser,
+  FiHome,
   FiLayers,
+  FiLogOut,
+  FiPieChart,
+  FiSettings,
+  FiShoppingBag,
+  FiTag,
+  FiUser,
+  FiUsers,
 } from 'react-icons/fi';
+
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 export interface SidebarItem {
   title: string;
@@ -32,49 +33,49 @@ const sidebarItems: SidebarItem[] = [
   {
     title: 'Dashboard',
     href: '/dashboard',
-    icon: <FiHome className="h-5 w-5" />,
+    icon: <FiHome className="size-5" />,
   },
   {
     title: 'Products',
     href: '/products',
-    icon: <FiShoppingBag className="h-5 w-5" />,
+    icon: <FiShoppingBag className="size-5" />,
     items: [
       { 
         title: 'All Products', 
         href: '/products', 
-        icon: <FiBox className="h-4 w-4" /> 
+        icon: <FiBox className="size-4" /> 
       },
       { 
         title: 'Categories', 
         href: '/products/categories', 
-        icon: <FiLayers className="h-4 w-4" /> 
+        icon: <FiLayers className="size-4" /> 
       },
       { 
         title: 'Inventory', 
         href: '/products/inventory', 
-        icon: <FiTag className="h-4 w-4" /> 
+        icon: <FiTag className="size-4" /> 
       },
     ],
   },
   {
     title: 'Customers',
     href: '/customers',
-    icon: <FiUsers className="h-5 w-5" />,
+    icon: <FiUsers className="size-5" />,
   },
   {
     title: 'Orders',
     href: '/orders',
-    icon: <FiFileText className="h-5 w-5" />,
+    icon: <FiFileText className="size-5" />,
   },
   {
     title: 'Analytics',
     href: '/analytics',
-    icon: <FiPieChart className="h-5 w-5" />,
+    icon: <FiPieChart className="size-5" />,
   },
   {
     title: 'Settings',
     href: '/settings',
-    icon: <FiSettings className="h-5 w-5" />,
+    icon: <FiSettings className="size-5" />,
   },
 ];
 
@@ -135,7 +136,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 rounded-full"
+              className="size-6 rounded-full"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -143,9 +144,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }}
             >
               {isExpanded ? (
-                <FiChevronDown className="h-4 w-4" />
+                <FiChevronDown className="size-4" />
               ) : (
-                <FiChevronRight className="h-4 w-4" />
+                <FiChevronRight className="size-4" />
               )}
             </Button>
           )}
@@ -188,18 +189,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* User Profile */}
       <div className="border-t p-4">
         <div className="flex items-center gap-3">
-          <Avatar className="h-9 w-9">
+          <Avatar className="size-9">
             <AvatarImage src="/avatars/01.png" alt="User" />
             <AvatarFallback className="bg-primary text-primary-foreground">
-              <FiUser className="h-4 w-4" />
+              <FiUser className="size-4" />
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 overflow-hidden">
             <p className="truncate text-sm font-medium">Admin User</p>
             <p className="truncate text-xs text-muted-foreground">admin@hypesoft.com</p>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <FiLogOut className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="size-8">
+            <FiLogOut className="size-4" />
           </Button>
         </div>
       </div>

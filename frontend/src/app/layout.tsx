@@ -1,8 +1,10 @@
 import './globals.css';
-import type { Metadata } from 'next';
+
 import { Inter, Roboto_Mono } from 'next/font/google';
+
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
+import type { Metadata } from 'next';
 
 // Configuração de fontes
 const inter = Inter({

@@ -1,18 +1,19 @@
-import React from 'react';
-import { MainLayout } from '@/components/layout/MainLayout';
-import { FiDollarSign, FiShoppingBag, FiUsers, FiTrendingUp } from 'react-icons/fi';
-import { Bar, Line } from 'react-chartjs-2';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
   BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Legend,
+  LinearScale,
   LineElement,
   PointElement,
   Title,
   Tooltip,
-  Legend,
 } from 'chart.js';
+import React from 'react';
+import { Bar, Line } from 'react-chartjs-2';
+import { FiDollarSign, FiShoppingBag, FiTrendingUp,FiUsers } from 'react-icons/fi';
+
+import { MainLayout } from '@/components/layout/MainLayout';
 
 // Register ChartJS components
 ChartJS.register(
@@ -72,7 +73,7 @@ const chartOptions = {
         drawBorder: false,
       },
       ticks: {
-        callback: function(value: any) {
+        callback(value: any) {
           return '$' + value.toLocaleString();
         },
       },
@@ -86,7 +87,7 @@ const chartOptions = {
 };
 
 const StatCard = ({ title, value, change, icon: Icon }: { title: string; value: string; change: string; icon: React.ElementType }) => (
-  <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+  <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
     <div className="flex items-center justify-between">
       <div>
         <p className="text-sm font-medium text-gray-500">{title}</p>
@@ -95,7 +96,7 @@ const StatCard = ({ title, value, change, icon: Icon }: { title: string; value: 
           {parseFloat(change) >= 0 ? '↑' : '↓'} {change} vs last month
         </p>
       </div>
-      <div className="p-3 rounded-lg bg-primary-50 text-primary-600">
+      <div className="bg-primary-50 text-primary-600 rounded-lg p-3">
         <Icon size={24} />
       </div>
     </div>
@@ -111,7 +112,7 @@ const DashboardPage = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard 
           title="Total Revenue" 
           value="$24,780" 
@@ -139,11 +140,11 @@ const DashboardPage = () => {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 gap-6 mb-8 lg:grid-cols-2">
-        <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-6">
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Revenue Overview</h2>
-            <select className="text-sm border-0 rounded-md bg-gray-100 focus:ring-2 focus:ring-primary-500">
+            <select className="focus:ring-primary-500 rounded-md border-0 bg-gray-100 text-sm focus:ring-2">
               <option>Last 7 days</option>
               <option>Last 30 days</option>
               <option>Last 3 months</option>
@@ -154,10 +155,10 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-6">
+        <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Sales Overview</h2>
-            <select className="text-sm border-0 rounded-md bg-gray-100 focus:ring-2 focus:ring-primary-500">
+            <select className="focus:ring-primary-500 rounded-md border-0 bg-gray-100 text-sm focus:ring-2">
               <option>Last 7 days</option>
               <option>Last 30 days</option>
               <option>Last 3 months</option>
@@ -170,10 +171,10 @@ const DashboardPage = () => {
       </div>
 
       {/* Recent Orders */}
-      <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between mb-6">
+      <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+        <div className="mb-6 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Recent Orders</h2>
-          <button className="text-sm font-medium text-primary-600 hover:text-primary-700">
+          <button className="text-primary-600 hover:text-primary-700 text-sm font-medium">
             View All
           </button>
         </div>
@@ -181,24 +182,24 @@ const DashboardPage = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr>
-                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Order ID
                 </th>
-                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Customer
                 </th>
-                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Date
                 </th>
-                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Amount
                 </th>
-                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Status
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 bg-white">
               {[
                 { id: '#ORD-001', customer: 'John Smith', date: '2023-05-15', amount: '$125.00', status: 'Completed' },
                 { id: '#ORD-002', customer: 'Sarah Johnson', date: '2023-05-14', amount: '$89.99', status: 'Processing' },
@@ -207,20 +208,20 @@ const DashboardPage = () => {
                 { id: '#ORD-005', customer: 'Robert Wilson', date: '2023-05-12', amount: '$199.99', status: 'Pending' },
               ].map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
                     {order.id}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     {order.customer}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     {order.date}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     {order.amount}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  <td className="whitespace-nowrap px-6 py-4">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                       order.status === 'Completed' 
                         ? 'bg-green-100 text-green-800' 
                         : order.status === 'Processing' 

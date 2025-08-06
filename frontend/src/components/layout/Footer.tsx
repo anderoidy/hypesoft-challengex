@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { cn } from '@/lib/theme';
+
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -14,13 +14,13 @@ export function Footer() {
           <div className="flex items-center gap-4">
             <Link 
               href="/privacy" 
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               Privacy Policy
             </Link>
             <Link 
               href="/terms" 
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               Terms of Service
             </Link>
