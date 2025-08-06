@@ -255,7 +255,12 @@ export type Theme = typeof theme;
 
 export function getThemeColor(theme: 'light' | 'dark', colorPath: string) {
   const path = colorPath.split('.');
-  let current: any = theme === 'dark' ? theme.dark.colors : theme.colors;
+  let current: any = theme === 'dark' ? theme.dark?.colors : theme.colors;
+  
+  if (!current) {
+    console.warn(`Theme or colors not found`);
+    return 'currentColor';
+  }
   
   for (const key of path) {
     if (current[key] === undefined) {
@@ -269,9 +274,9 @@ export function getThemeColor(theme: 'light' | 'dark', colorPath: string) {
 }
 
 export function getTextColor(theme: 'light' | 'dark') {
-  return theme === 'dark' ? theme.dark.colors.foreground : theme.colors.foreground;
+  return theme === 'dark' ? theme.dark?.colors?.foreground || '#ffffff' : theme.colors?.foreground || '#000000';
 }
 
 export function getBackgroundColor(theme: 'light' | 'dark') {
-  return theme === 'dark' ? theme.dark.colors.background : theme.colors.background;
+  return theme === 'dark' ? theme.dark?.colors?.background || '#000000' : theme.colors?.background || '#ffffff';
 }

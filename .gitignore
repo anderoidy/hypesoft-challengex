@@ -38,3 +38,5 @@ Thumbs.db
 
 # Exportações Keycloak (se você quiser ignorar)
 **/realm-export.json
+
+.fake

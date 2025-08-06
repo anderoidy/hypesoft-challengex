@@ -3,23 +3,34 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   compiler: {
-    // Habilita styled-components
     styledComponents: true,
   },
   experimental: {
-    // Habilita o App Router do Next.js 14
-    appDir: true,
-    // Habilita o novo sistema de fontes do Next.js
-    fontLoaders: [
-      { loader: '@next/font/google', options: { subsets: ['latin'] } },
+    // Server Actions estão ativadas por padrão no Next.js 14
+    optimizePackageImports: [
+      '@radix-ui/react-dialog', 
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-avatar',
+      '@radix-ui/react-label',
+      '@radix-ui/react-scroll-area',
+      '@radix-ui/react-select',
+      '@radix-ui/react-separator',
+      '@radix-ui/react-slot',
+      '@radix-ui/react-toast'
     ],
   },
-  // Configurações de imagens
   images: {
-    domains: ['images.unsplash.com', 'source.unsplash.com'],
+    domains: [
+      'images.unsplash.com', 
+      'source.unsplash.com',
+      'lh3.googleusercontent.com',
+      'avatars.githubusercontent.com'
+    ],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60 * 60 * 24 * 30, // 30 dias
   },
-  // Configurações de redirecionamento e reescrita de URL
   async redirects() {
     return [
       {
@@ -29,7 +40,6 @@ const nextConfig = {
       },
     ];
   },
-  // Configurações de cabeçalhos de segurança
   async headers() {
     return [
       {
@@ -47,16 +57,18 @@ const nextConfig = {
             key: 'X-XSS-Protection',
             value: '1; mode=block',
           },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
         ],
       },
     ];
   },
-  // Configurações de otimização de imagens
-  images: {
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-  },
-  // Configurações de webpack
   webpack(config) {
     // Adiciona suporte a arquivos SVG como componentes React
     config.module.rules.push({
@@ -67,6 +79,10 @@ const nextConfig = {
 
     return config;
   },
+  // Otimizações para produção
+  productionBrowserSourceMaps: false, // Desativa source maps no navegador em produção
+  compress: true, // Habilita compressão GZIP
+  poweredByHeader: false, // Remove o cabeçalho X-Powered-By
 };
 
 module.exports = nextConfig;

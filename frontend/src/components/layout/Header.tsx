@@ -1,5 +1,15 @@
 import React from 'react';
-import { FiMenu, FiSearch, FiBell, FiUser, FiChevronDown, FiMoon, FiSun } from 'react-icons/fi';
+import { 
+  FiMenu, 
+  FiSearch, 
+  FiBell, 
+  FiUser, 
+  FiChevronDown, 
+  FiMoon, 
+  FiSun,
+  FiSettings,
+  FiLogOut
+} from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -16,9 +26,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface HeaderProps {
   onMenuClick: () => void;
+  className?: string;
 }
 
-export function Header({ onMenuClick }: HeaderProps) {
+export const Header: React.FC<HeaderProps> = ({ onMenuClick, className }) => {
   const { theme, setTheme } = useTheme();
   const [isMounted, setIsMounted] = React.useState(false);
 
@@ -30,8 +41,15 @@ export function Header({ onMenuClick }: HeaderProps) {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
+  if (!isMounted) {
+    return null;
+  }
+
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6 lg:px-8">
+    <header className={cn(
+      "sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6 lg:px-8",
+      className
+    )}>
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -119,4 +137,4 @@ export function Header({ onMenuClick }: HeaderProps) {
       </div>
     </header>
   );
-}
+};

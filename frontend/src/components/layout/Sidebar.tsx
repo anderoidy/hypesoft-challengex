@@ -1,10 +1,10 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/theme';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   FiHome,
   FiShoppingBag,
@@ -21,7 +21,7 @@ import {
   FiLayers,
 } from 'react-icons/fi';
 
-interface SidebarItem {
+export interface SidebarItem {
   title: string;
   href: string;
   icon: React.ReactNode;
@@ -39,9 +39,21 @@ const sidebarItems: SidebarItem[] = [
     href: '/products',
     icon: <FiShoppingBag className="h-5 w-5" />,
     items: [
-      { title: 'All Products', href: '/products', icon: <FiBox className="h-4 w-4" /> },
-      { title: 'Categories', href: '/products/categories', icon: <FiLayers className="h-4 w-4" /> },
-      { title: 'Inventory', href: '/products/inventory', icon: <FiTag className="h-4 w-4" /> },
+      { 
+        title: 'All Products', 
+        href: '/products', 
+        icon: <FiBox className="h-4 w-4" /> 
+      },
+      { 
+        title: 'Categories', 
+        href: '/products/categories', 
+        icon: <FiLayers className="h-4 w-4" /> 
+      },
+      { 
+        title: 'Inventory', 
+        href: '/products/inventory', 
+        icon: <FiTag className="h-4 w-4" /> 
+      },
     ],
   },
   {
@@ -70,9 +82,15 @@ interface SidebarProps {
   isOpen: boolean;
   isMobile: boolean;
   onClose: () => void;
+  className?: string;
 }
 
-export function Sidebar({ isOpen, isMobile, onClose }: SidebarProps) {
+export const Sidebar: React.FC<SidebarProps> = ({
+  isOpen,
+  isMobile,
+  onClose,
+  className,
+}) => {
   const pathname = usePathname();
   const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
 
@@ -150,6 +168,7 @@ export function Sidebar({ isOpen, isMobile, onClose }: SidebarProps) {
             ? 'translate-x-0'
             : '-translate-x-full'
           : 'translate-x-0',
+        className
       )}
     >
       {/* Logo */}
@@ -186,4 +205,4 @@ export function Sidebar({ isOpen, isMobile, onClose }: SidebarProps) {
       </div>
     </aside>
   );
-}
+};

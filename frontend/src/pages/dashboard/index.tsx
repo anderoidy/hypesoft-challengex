@@ -1,5 +1,5 @@
 import React from 'react';
-import MainLayout from '@/components/layout/MainLayout';
+import { MainLayout } from '@/components/layout/MainLayout';
 import { FiDollarSign, FiShoppingBag, FiUsers, FiTrendingUp } from 'react-icons/fi';
 import { Bar, Line } from 'react-chartjs-2';
 import {

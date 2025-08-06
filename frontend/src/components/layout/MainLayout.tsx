@@ -1,12 +1,15 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState, useEffect } from 'react';
 import { Inter } from 'next/font/google';
-import { cn } from '@/lib/theme';
+import { cn } from '@/lib/utils';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { Footer } from './Footer';
-import { Toaster } from '@/components/ui/toaster';
+import { Toast } from '@/components/ui/toaster';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
+const inter = Inter({ 
+  subsets: ['latin'],
+  variable: '--font-sans',
+});
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -15,21 +18,21 @@ interface MainLayoutProps {
   className?: string;
 }
 
-export function MainLayout({
+export const MainLayout: React.FC<MainLayoutProps> = ({
   children,
   title = 'Hypesoft Challenge',
   description = 'Dashboard administrativo',
   className,
-}: MainLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const [isMobile, setIsMobile] = React.useState(false);
+}) => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 1024);
     };
 
-    // Set the initial value
+    // Set initial value
     handleResize();
 
     // Add event listener
@@ -40,10 +43,18 @@ export function MainLayout({
   }, []);
 
   return (
-    <div className={cn('min-h-screen bg-background font-sans antialiased', inter.variable, className)}>
+    <div className={cn(
+      'min-h-screen bg-background font-sans antialiased',
+      inter.variable,
+      className
+    )}>
       <div className="flex h-screen overflow-hidden">
         {/* Sidebar */}
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} isMobile={isMobile} />
+        <Sidebar 
+          isOpen={sidebarOpen} 
+          onClose={() => setSidebarOpen(false)} 
+          isMobile={isMobile} 
+        />
 
         {/* Main content */}
         <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
@@ -56,7 +67,11 @@ export function MainLayout({
               {title && (
                 <div className="mb-6">
                   <h1 className="text-2xl font-bold text-foreground">{title}</h1>
-                  {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
+                  {description && (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {description}
+                    </p>
+                  )}
                 </div>
               )}
               {children}
@@ -69,7 +84,7 @@ export function MainLayout({
       </div>
 
       {/* Toast notifications */}
-      <Toaster />
+      <Toast />
     </div>
   );
-}
+};
