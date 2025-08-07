@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Hypesoft.Application.Commands;
 using Hypesoft.Domain.Entities;
 
@@ -25,6 +26,20 @@ public static class ProductTestData
             IsFeatured: true,
             IsPublished: true,
             UserId: "user123"
+        );
+    }
+
+    public static UpdateProductCommand CreateValidUpdateProductCommand(Guid productId, Guid categoryId, List<Guid>? tagIds = null)
+    {
+        return new UpdateProductCommand(
+            Id: productId,
+            Name: "Produto Atualizado",
+            Description: "Descrição atualizada do produto",
+            Price: 199.99m,
+            StockQuantity: 50,
+            ImageUrl: "https://example.com/updated-product.jpg",
+            CategoryId: categoryId,
+            TagIds: tagIds ?? new List<Guid> { Guid.NewGuid() }
         );
     }
 
@@ -59,5 +74,14 @@ public static class ProductTestData
             isPublished: true,
             userId: "user123"
         );
+    }
+
+    public static Domain.Entities.Tag CreateValidTag()
+    {
+        return new Domain.Entities.Tag("Tag de Teste", "Descrição da tag de teste")
+        {
+            Id = Guid.NewGuid(),
+            CreatedAt = DateTime.UtcNow
+        };
     }
 }
