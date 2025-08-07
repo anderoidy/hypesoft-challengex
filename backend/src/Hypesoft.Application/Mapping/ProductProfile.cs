@@ -3,6 +3,8 @@ using Hypesoft.Domain.Entities;
 using Hypesoft.Application.DTOs;
 using Hypesoft.Application.Commands;
 
+namespace Hypesoft.Application.Mapping;
+
 public class ProductProfile : Profile
 {
     public ProductProfile()

@@ -1,3 +1,4 @@
+namespace Hypesoft.Application.DTOs;
 public class ProductDto
 {
     public Guid Id { get; set; }

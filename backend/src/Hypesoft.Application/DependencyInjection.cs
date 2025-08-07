@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using FluentValidation;
+using MediatR;
+using AutoMapper;
 using System.Reflection;
 
 namespace Hypesoft.Application;
@@ -10,6 +12,12 @@ public static class DependencyInjection
     {
         // Registra todos os validators do FluentValidation
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+
+        // MediatR handlers
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+
+        // AutoMapper profiles
+        services.AddAutoMapper(Assembly.GetExecutingAssembly());
         
         return services;
     }

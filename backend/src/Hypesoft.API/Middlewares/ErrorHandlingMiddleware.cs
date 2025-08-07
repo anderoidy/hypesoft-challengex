@@ -103,3 +103,4 @@ public static class ErrorHandlingMiddlewareExtensions
         return builder.UseMiddleware<ErrorHandlingMiddleware>();
     }
 }
+
