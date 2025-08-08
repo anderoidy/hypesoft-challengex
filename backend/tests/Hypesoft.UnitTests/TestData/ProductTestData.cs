@@ -43,6 +43,11 @@ public static class ProductTestData
         );
     }
 
+    public static DeleteProductCommand CreateDeleteProductCommand(Guid productId)
+    {
+        return new DeleteProductCommand(productId);
+    }
+
     public static Category CreateValidCategory()
     {
         return new Category("Categoria de Teste", "Descrição da categoria de teste")
