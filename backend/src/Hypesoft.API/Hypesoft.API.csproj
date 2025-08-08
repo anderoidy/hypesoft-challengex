@@ -12,42 +12,41 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MongoDB.Driver" Version="3.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
-    <PackageReference Include="MongoDB.EntityFrameworkCore" Version="8.2.0" />
-    <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
-    <PackageReference Include="NSwag.AspNetCore" Version="14.2.0" />
-    <PackageReference Include="NSwag.MSBuild" Version="14.2.0" />
-    <PackageReference Include="AutoMapper" Version="12.0.1" />
-    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore"  />
+    <PackageReference Include="AutoMapper"  />
+    <PackageReference Include="MediatR"  />
+    <PackageReference Include="MongoDB.Driver"  />
+    <PackageReference Include="MongoDB.EntityFrameworkCore"  />
+    <PackageReference Include="AspNetCore.HealthChecks.UI.Client"  />
+    <PackageReference Include="NSwag.AspNetCore"  />
+    <PackageReference Include="NSwag.MSBuild"  />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AspNetCore.HealthChecks.MongoDb" Version="8.1.0" />
-    <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.3" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.3" />
-    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.1">
+    <PackageReference Include="AspNetCore.HealthChecks.MongoDb"  />
+    <PackageReference Include="FluentValidation.AspNetCore"  />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer"  />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi"  />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" >
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Serilog" Version="4.2.0" />
-    <PackageReference Include="Serilog.AspNetCore" Version="8.0.0" />
-    <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
-    <PackageReference Include="Serilog.Enrichers.Process" Version="3.0.0" />
-    <PackageReference Include="Serilog.Enrichers.Thread" Version="3.1.0" />
-    <PackageReference Include="Serilog.Expressions" Version="4.0.0" />
-    <PackageReference Include="Serilog.Settings.Configuration" Version="8.0.0" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
-    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="6.5.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore.Filters" Version="7.0.5" />
-    <PackageReference Include="MediatR" Version="12.4.1" />
-    <PackageReference Include="Ardalis.Result" Version="10.1.0" />
-    <PackageReference Include="Ardalis.GuardClauses" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.2" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.2" />
+    <PackageReference Include="Serilog"  />
+    <PackageReference Include="Serilog.AspNetCore"  />
+    <PackageReference Include="Serilog.Enrichers.Environment"  />
+    <PackageReference Include="Serilog.Enrichers.Process"  />
+    <PackageReference Include="Serilog.Enrichers.Thread"  />
+    <PackageReference Include="Serilog.Expressions"  />
+    <PackageReference Include="Serilog.Settings.Configuration"  />
+    <PackageReference Include="Serilog.Sinks.Console"  />
+    <PackageReference Include="Serilog.Sinks.File"  />
+    <PackageReference Include="Swashbuckle.AspNetCore"  />
+    <PackageReference Include="Swashbuckle.AspNetCore.Annotations"  />
+    <PackageReference Include="Swashbuckle.AspNetCore.Filters"  />
+    <PackageReference Include="Ardalis.Result"  />
+    <PackageReference Include="Ardalis.GuardClauses"  />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"  />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection"  />
   </ItemGroup>
 
   <ItemGroup>

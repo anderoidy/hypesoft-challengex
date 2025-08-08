@@ -1,9 +1,10 @@
+using Hypesoft.Domain.Common;
 using Hypesoft.Domain.Common.Interfaces;
 
 namespace Hypesoft.Domain.Repositories;
 
 public interface INamedEntityRepository<TEntity> : IRepository<TEntity> 
-    where TEntity : class, INamedEntity
+    where TEntity : EntityBase, INamedEntity
 {
     /// <summary>
     /// Verifies if a name is unique in the repository
