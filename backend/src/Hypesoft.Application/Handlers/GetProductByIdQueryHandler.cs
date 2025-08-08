@@ -2,7 +2,7 @@ using Ardalis.Result;
 using AutoMapper;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using Hypesoft.Application.Commands;
+using Hypesoft.Application.Queries;
 using Hypesoft.Application.Common.Interfaces;
 using Hypesoft.Domain.Entities;
 using Hypesoft.Domain.Repositories;
@@ -10,64 +10,55 @@ using Hypesoft.Application.DTOs;
 
 namespace Hypesoft.Application.Handlers;
 
-public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductCommand, Result<Guid>>
+public sealed class GetProductByIdQueryHandler : IRequestHandler<GetProductByIdQuery, Result<ProductDto>>
 {
     private readonly IApplicationUnitOfWork _uow;
     private readonly IMapper _mapper;
-    private readonly ILogger<CreateProductCommandHandler> _logger;
+    private readonly ILogger<GetProductByIdQueryHandler> _logger;
 
-    public CreateProductCommandHandler(IApplicationUnitOfWork uow, IMapper mapper, ILogger<CreateProductCommandHandler> logger)
+    public GetProductByIdQueryHandler(
+        IApplicationUnitOfWork uow, 
+        IMapper mapper, 
+        ILogger<GetProductByIdQueryHandler> logger)
     {
-        _uow = uow;
-        _mapper = mapper;
-        _logger = logger;
+        _uow = uow ?? throw new ArgumentNullException(nameof(uow));
+        _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<Result<Guid>> Handle(CreateProductCommand request, CancellationToken cancellationToken)
+    public async Task<Result<ProductDto>> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
     {
         try
         {
-            // Validação de unicidade de SKU e Barcode
-            if (!string.IsNullOrWhiteSpace(request.Sku) && !await _uow.Products.IsSkuUniqueAsync(request.Sku, cancellationToken))
-                return Result.Invalid(new() { { nameof(request.Sku), "SKU já existe." } });
+            _logger.LogInformation("Buscando produto com ID {ProductId}", request.Id);
+            
+            var product = await _uow.Products.GetByIdAsync(request.Id, cancellationToken);
+            
+            if (product == null)
+            {
+                _logger.LogWarning("Produto com ID {ProductId} não encontrado", request.Id);
+                return Result.NotFound($"Produto com ID {request.Id} não encontrado.");
+            }
 
-            if (!string.IsNullOrWhiteSpace(request.Barcode) && !await _uow.Products.IsBarcodeUniqueAsync(request.Barcode, cancellationToken))
-                return Result.Invalid(new() { { nameof(request.Barcode), "Código de barras já existe." } });
+            // Busca a categoria associada ao produto
+            var category = await _uow.Categories.GetByIdAsync(product.CategoryId, cancellationToken);
+            
+            // Mapeia o produto para DTO
+            var productDto = _mapper.Map<ProductDto>(product);
+            
+            // Adiciona o nome da categoria ao DTO, se existir
+            if (category != null)
+            {
+                productDto.CategoryName = category.Name;
+            }
 
-            // Validação de categoria
-            var category = await _uow.Categories.GetByIdAsync(request.CategoryId, cancellationToken);
-            if (category == null)
-                return Result.Invalid(new() { { nameof(request.CategoryId), "Categoria não encontrada." } });
-
-            // Criação do produto
-            var product = new Product(
-                request.Name,
-                request.Description,
-                request.Price,
-                request.CategoryId,
-                request.Sku,
-                request.Barcode,
-                request.DiscountPrice,
-                request.StockQuantity,
-                request.ImageUrl,
-                request.Weight,
-                request.Height,
-                request.Width,
-                request.Length,
-                request.IsFeatured,
-                request.IsPublished,
-                request.UserId);
-
-            await _uow.Products.AddAsync(product, cancellationToken);
-            await _uow.SaveChangesAsync(cancellationToken);
-
-            _logger.LogInformation("Produto criado com ID {ProductId}", product.Id);
-            return Result.Success(product.Id);
+            _logger.LogInformation("Produto com ID {ProductId} encontrado com sucesso", request.Id);
+            return Result.Success(productDto);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao criar produto");
-            return Result.Error("Erro inesperado ao criar produto.");
+            _logger.LogError(ex, "Erro ao buscar produto com ID {ProductId}", request.Id);
+            return Result.Error($"Ocorreu um erro ao buscar o produto com ID {request.Id}.");
         }
     }
 }
