@@ -3,7 +3,9 @@ using Hypesoft.Domain.Entities;
 
 namespace Hypesoft.Domain.Repositories;
 
-public interface ITagRepository : IRepository<Tag>
+public interface ITagRepository : INamedEntityRepository<Tag>
 {
-    Task<bool> IsNameUniqueAsync(string name, CancellationToken cancellationToken = default);
+    // Métodos específicos de Tag podem ser adicionados aqui
+    Task<IEnumerable<Tag>> GetActiveTagsAsync(CancellationToken cancellationToken = default);
+    Task<IEnumerable<Tag>> GetTagsByProductIdAsync(Guid productId, CancellationToken cancellationToken = default);
 }

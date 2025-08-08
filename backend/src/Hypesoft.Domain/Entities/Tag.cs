@@ -1,9 +1,10 @@
 using Hypesoft.Domain.Common;
+using Hypesoft.Domain.Common.Interfaces;
 using Hypesoft.Domain.Exceptions;
 
 namespace Hypesoft.Domain.Entities;
 
-public class Tag : EntityBase
+public class Tag : EntityBase, INamedEntity
 {
     public string Name { get; private set; }
     public string? Description { get; private set; }

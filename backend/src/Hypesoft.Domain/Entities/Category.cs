@@ -1,8 +1,9 @@
 using Hypesoft.Domain.Common;
+using Hypesoft.Domain.Common.Interfaces;
 
 namespace Hypesoft.Domain.Entities;
 
-public class Category : EntityBase
+public class Category : EntityBase, INamedEntity
 {
     public string Name { get; private set; }
     public string? Description { get; private set; }
@@ -53,43 +54,59 @@ public class Category : EntityBase
         if (subCategory.ParentCategoryId == Id)
             return; // Já é uma subcategoria desta categoria
 
+        // Remove de outra categoria pai, se houver
+        if (subCategory.ParentCategory != null)
+            subCategory.ParentCategory.RemoveSubCategory(subCategory);
+
         subCategory.ParentCategoryId = Id;
+        subCategory.ParentCategory = this;
         subCategory.IsMainCategory = false;
-        SubCategories.Add(subCategory);
-
+        
         if (userId != null)
-        {
-            UpdateAuditFields(userId);
             subCategory.UpdateAuditFields(userId);
-        }
+            
+        SubCategories.Add(subCategory);
     }
 
-    public void RemoveSubCategory(Guid subCategoryId, string? userId = null)
+    public void RemoveSubCategory(Category subCategory, string? userId = null)
     {
-        var subCategory = SubCategories.FirstOrDefault(sc => sc.Id == subCategoryId);
-        if (subCategory != null)
-        {
-            SubCategories.Remove(subCategory);
-            subCategory.ParentCategoryId = null;
-            subCategory.IsMainCategory = true;
+        if (subCategory == null)
+            throw new ArgumentNullException(nameof(subCategory));
 
-            if (userId != null)
-            {
-                UpdateAuditFields(userId);
-                subCategory.UpdateAuditFields(userId);
-            }
-        }
+        if (subCategory.ParentCategoryId != Id)
+            return; // Não é subcategoria desta categoria
+
+        subCategory.ParentCategoryId = null;
+        subCategory.ParentCategory = null;
+        subCategory.IsMainCategory = true;
+        
+        if (userId != null)
+            subCategory.UpdateAuditFields(userId);
+            
+        SubCategories.Remove(subCategory);
     }
 
-    public void SetAsMainCategory(string? userId = null)
+    public void SetAsMainCategory(bool isMain, string? userId = null)
     {
-        if (IsMainCategory)
+        if (IsMainCategory == isMain)
             return;
 
-        IsMainCategory = true;
-        ParentCategoryId = null;
-        ParentCategory = null;
+        if (!isMain && ParentCategoryId == null)
+            throw new InvalidOperationException("Uma categoria raiz deve ser uma categoria principal");
 
+        IsMainCategory = isMain;
+        
+        if (userId != null)
+            UpdateAuditFields(userId);
+    }
+
+    public void UpdateImage(string imageUrl, string? userId = null)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl))
+            throw new ArgumentException("A URL da imagem não pode ser vazia", nameof(imageUrl));
+
+        ImageUrl = imageUrl;
+        
         if (userId != null)
             UpdateAuditFields(userId);
     }
