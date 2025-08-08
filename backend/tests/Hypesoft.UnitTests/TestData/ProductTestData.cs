@@ -89,4 +89,42 @@ public static class ProductTestData
             CreatedAt = DateTime.UtcNow
         };
     }
+
+    public static List<Product> CreateProductList(int count, Guid? categoryId = null)
+    {
+        var products = new List<Product>();
+        var category = categoryId.HasValue 
+            ? new Category("Categoria de Teste", "Descrição") { Id = categoryId.Value }
+            : CreateValidCategory();
+
+        for (int i = 0; i < count; i++)
+        {
+            var product = new Product(
+                name: $"Produto de Teste {i + 1}",
+                description: $"Descrição do produto de teste {i + 1}",
+                price: 10.99m * (i + 1),
+                categoryId: category.Id,
+                sku: $"SKU-{1000 + i}",
+                barcode: $"78912345{1000 + i}",
+                discountPrice: 9.99m * (i + 1),
+                stockQuantity: 10 * (i + 1),
+                imageUrl: $"https://example.com/product-{i + 1}.jpg",
+                weight: 0.5f * (i + 1),
+                height: 10.0f + i,
+                width: 5.0f + i,
+                length: 15.0f + i,
+                isFeatured: i % 2 == 0,
+                isPublished: true,
+                userId: "user123")
+            {
+                Id = Guid.NewGuid(),
+                CreatedAt = DateTime.UtcNow.AddDays(-i),
+                Category = category
+            };
+
+            products.Add(product);
+        }
+
+        return products;
+    }
 }
