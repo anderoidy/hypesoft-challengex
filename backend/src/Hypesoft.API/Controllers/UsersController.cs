@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.JsonWebTokens;
+using Hypesoft.API.Controllers.Base;
 
 namespace Hypesoft.API.Controllers;
 
@@ -118,9 +119,9 @@ public class UsersController : BaseAuthController
                 await getUserResponse.Content.ReadAsStringAsync());
 
             // Atualize apenas os campos fornecidos
-            if (!string.IsNullOrEmpty(request.FirstName)) user.FirstName = request.FirstName;
-            if (!string.IsNullOrEmpty(request.LastName)) user.LastName = request.LastName;
-            if (!string.IsNullOrEmpty(request.Email)) user.Email = request.Email;
+            if (request.FirstName != null) user.FirstName = request.FirstName;
+            if (request.LastName != null) user.LastName = request.LastName;
+            if (request.Email != null) user.Email = request.Email;
             
             // Atualize o usuário no Keycloak
             var updateResponse = await client.PutAsJsonAsync(userEndpoint, user);

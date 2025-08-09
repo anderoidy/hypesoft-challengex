@@ -1,14 +1,22 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System;
 
 namespace Hypesoft.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[AllowAnonymous]
+[Authorize]
 public class AuthController : ControllerBase
 {
     private readonly IHttpClientFactory _httpClientFactory;
@@ -26,6 +34,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         try
@@ -38,10 +47,10 @@ public class AuthController : ControllerBase
             var requestContent = new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string, string>("grant_type", "password"),
-                new KeyValuePair<string, string>("client_id", clientId),
-                new KeyValuePair<string, string>("client_secret", clientSecret),
-                new KeyValuePair<string, string>("username", request.Username),
-                new KeyValuePair<string, string>("password", request.Password)
+                new KeyValuePair<string, string>("client_id", clientId ?? throw new ArgumentNullException(nameof(clientId))),
+                new KeyValuePair<string, string>("client_secret", clientSecret ?? throw new ArgumentNullException(nameof(clientSecret))),
+                new KeyValuePair<string, string>("username", request.Username ?? throw new ArgumentNullException(nameof(request.Username))),
+                new KeyValuePair<string, string>("password", request.Password ?? throw new ArgumentNullException(nameof(request.Password)))
             });
 
             var response = await client.PostAsync(tokenEndpoint, requestContent);
@@ -65,6 +74,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("refresh-token")]
+    [AllowAnonymous]
     public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
     {
         try
@@ -77,9 +87,9 @@ public class AuthController : ControllerBase
             var requestContent = new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string, string>("grant_type", "refresh_token"),
-                new KeyValuePair<string, string>("client_id", clientId),
-                new KeyValuePair<string, string>("client_secret", clientSecret),
-                new KeyValuePair<string, string>("refresh_token", request.RefreshToken)
+                new KeyValuePair<string, string>("client_id", clientId ?? throw new ArgumentNullException(nameof(clientId))),
+                new KeyValuePair<string, string>("client_secret", clientSecret ?? throw new ArgumentNullException(nameof(clientSecret))),
+                new KeyValuePair<string, string>("refresh_token", request.RefreshToken ?? throw new ArgumentNullException(nameof(request.RefreshToken)))
             });
 
             var response = await client.PostAsync(tokenEndpoint, requestContent);
@@ -102,7 +112,6 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("logout")]
-    [Authorize]
     public async Task<IActionResult> Logout()
     {
         try
@@ -115,9 +124,9 @@ public class AuthController : ControllerBase
             var client = _httpClientFactory.CreateClient();
             var requestContent = new FormUrlEncodedContent(new[]
             {
-                new KeyValuePair<string, string>("client_id", clientId),
-                new KeyValuePair<string, string>("client_secret", clientSecret),
-                new KeyValuePair<string, string>("refresh_token", token)
+                new KeyValuePair<string, string>("client_id", clientId ?? throw new ArgumentNullException(nameof(clientId))),
+                new KeyValuePair<string, string>("client_secret", clientSecret ?? throw new ArgumentNullException(nameof(clientSecret))),
+                new KeyValuePair<string, string>("refresh_token", token ?? throw new ArgumentNullException(nameof(token)))
             });
 
             var response = await client.PostAsync(logoutEndpoint, requestContent);

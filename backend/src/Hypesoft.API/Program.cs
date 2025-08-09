@@ -1,12 +1,13 @@
 using Hypesoft.Application;
 using Hypesoft.Infrastructure;
 using Hypesoft.Domain.Exceptions;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Configuração do MediatR
 builder.Services.AddMediatR(cfg => 
-    cfg.RegisterServicesFromAssembly(typeof(Application.DependencyInjection).Assembly));
+    cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 
 // Configuração do AutoMapper
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
@@ -16,7 +17,12 @@ builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
 // Adiciona serviços ao container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddNewtonsoftJson(options =>
+    {
+        options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+        options.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
+    });
 
 // Configuração do CORS
 builder.Services.AddCors(options =>
