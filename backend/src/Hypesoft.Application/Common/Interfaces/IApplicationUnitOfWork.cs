@@ -1,5 +1,5 @@
 using Hypesoft.Domain.Common.Interfaces;
-using Hypesoft.Domain.Entities;
+using Hypesoft.Domain.Repositories;
 
 namespace Hypesoft.Application.Common.Interfaces;
 

@@ -11,6 +11,7 @@ using Hypesoft.Application.DTOs;
 using Hypesoft.Application.Queries;
 using Hypesoft.Domain.Entities;
 using Hypesoft.Domain.Repositories;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Hypesoft.Application.Handlers;
@@ -22,70 +23,56 @@ public class GetAllProductsQueryHandler : IRequestHandler<GetAllProductsQuery, R
     private readonly ILogger<GetAllProductsQueryHandler> _logger;
 
     public GetAllProductsQueryHandler(
-        IApplicationUnitOfWork uow, 
-        IMapper mapper, 
+        IApplicationUnitOfWork uow,
+        IMapper mapper,
         ILogger<GetAllProductsQueryHandler> logger)
     {
-        _uow = uow ?? throw new ArgumentNullException(nameof(uow));
-        _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _uow = uow;
+        _mapper = mapper;
+        _logger = logger;
     }
 
     public async Task<Result<PaginatedList<ProductDto>>> Handle(GetAllProductsQuery request, CancellationToken cancellationToken)
     {
         try
         {
-            _logger.LogInformation("Buscando produtos com os parâmetros: SearchTerm={SearchTerm}, PageNumber={PageNumber}, PageSize={PageSize}", 
-                request.SearchTerm, request.PageNumber, request.PageSize);
-
-            // Prepara a expressão de filtro
-            Expression<Func<Product, bool>>? filter = null;
+            // Build the predicate for filtering
+            System.Linq.Expressions.Expression<Func<Product, bool>>? predicate = null;
             
             if (!string.IsNullOrWhiteSpace(request.SearchTerm))
             {
                 var searchTerm = request.SearchTerm.Trim().ToLower();
-                filter = p => p.Name.ToLower().Contains(searchTerm) || 
-                             (p.Description != null && p.Description.ToLower().Contains(searchTerm));
+                predicate = p => p.Name.ToLower().Contains(searchTerm) || 
+                               (p.Description != null && p.Description.ToLower().Contains(searchTerm));
             }
 
-            // Obtém os produtos paginados do repositório
-            var (products, totalCount) = await _uow.Products.GetPagedAsync(
+            // Get paginated results
+            var (items, totalCount) = await _uow.Products.GetPagedAsync(
                 pageNumber: request.PageNumber,
                 pageSize: request.PageSize,
-                predicate: filter,
-                orderBy: q => q.OrderBy(p => p.Name),
-                includeProperties: "Category",
+                predicate: predicate,
+                includeProperties: "Category,ProductTags.Tag",
                 cancellationToken: cancellationToken);
 
-            // Mapeia os produtos para DTOs
-            var productDtos = _mapper.Map<List<ProductDto>>(products);
-
-            // Preenche o nome da categoria em cada DTO
-            foreach (var product in products)
-            {
-                var productDto = productDtos.FirstOrDefault(p => p.Id == product.Id);
-                if (productDto != null && product.Category != null)
-                {
-                    productDto.CategoryName = product.Category.Name;
-                }
-            }
-
-            // Cria o resultado paginado
+            // Map to DTOs
+            var itemsDto = _mapper.Map<List<ProductDto>>(items);
+            
+            // Create paginated result
             var paginatedResult = new PaginatedList<ProductDto>(
-                items: productDtos,
-                count: totalCount,
-                pageNumber: request.PageNumber,
-                pageSize: request.PageSize);
+                itemsDto,
+                totalCount,
+                request.PageNumber,
+                request.PageSize);
 
-            _logger.LogInformation("Encontrados {Count} produtos (página {PageNumber} de {TotalPages})", 
-                productDtos.Count, request.PageNumber, paginatedResult.TotalPages);
-
+            _logger.LogInformation("Retrieved {Count} of {TotalCount} products", 
+                itemsDto.Count, totalCount);
+                
             return Result.Success(paginatedResult);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao buscar produtos");
-            return Result.Error("Ocorreu um erro ao buscar os produtos. Por favor, tente novamente mais tarde.");
+            _logger.LogError(ex, "Error retrieving products");
+            return Result.Error($"An error occurred while retrieving products: {ex.Message}");
         }
     }
 }

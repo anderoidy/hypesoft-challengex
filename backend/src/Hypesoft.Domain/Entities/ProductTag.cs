@@ -1,7 +1,6 @@
 using Hypesoft.Domain.Common;
 using Hypesoft.Domain.Exceptions;
 
-
 namespace Hypesoft.Domain.Entities;
 
 public class ProductTag : EntityBase
@@ -23,6 +22,7 @@ public class ProductTag : EntityBase
     // Construtor privado para o EF Core
     protected ProductTag() { }
     
+    // Construtor para criar um ProductTag com Product e Tag completos
     public ProductTag(Product product, Tag tag, bool isFeatured = false, int displayOrder = 0, DateTime? startDate = null, DateTime? endDate = null, string? userId = null)
     {
         Product = product ?? throw new ArgumentNullException(nameof(product));
@@ -31,6 +31,27 @@ public class ProductTag : EntityBase
         Tag = tag ?? throw new ArgumentNullException(nameof(tag));
         TagId = tag.Id;
         
+        IsFeatured = isFeatured;
+        SetDisplayOrder(displayOrder);
+        
+        StartDate = startDate;
+        EndDate = endDate;
+        
+        if (userId != null)
+            SetCreatedBy(userId);
+    }
+    
+    // Construtor para criar um ProductTag apenas com IDs
+    public ProductTag(Guid productId, Guid tagId, bool isFeatured = false, int displayOrder = 0, DateTime? startDate = null, DateTime? endDate = null, string? userId = null)
+    {
+        if (productId == Guid.Empty)
+            throw new ArgumentException("Product ID cannot be empty", nameof(productId));
+            
+        if (tagId == Guid.Empty)
+            throw new ArgumentException("Tag ID cannot be empty", nameof(tagId));
+            
+        ProductId = productId;
+        TagId = tagId;
         IsFeatured = isFeatured;
         SetDisplayOrder(displayOrder);
         

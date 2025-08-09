@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Hypesoft.Application.Handlers;
 
-public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand, Result>
+public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand, Result<bool>>
 {
     private readonly IApplicationUnitOfWork _uow;
     private readonly ILogger<DeleteProductCommandHandler> _logger;
@@ -19,7 +19,7 @@ public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand,
         _logger = logger;
     }
 
-    public async Task<Result> Handle(DeleteProductCommand request, CancellationToken cancellationToken)
+    public async Task<Result<bool>> Handle(DeleteProductCommand request, CancellationToken cancellationToken)
     {
         try
         {
@@ -30,18 +30,11 @@ public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand,
                 return Result.NotFound($"Product with ID {request.Id} not found");
             }
 
-            // Check if product can be deleted (e.g., no associated orders)
-            // var isProductInUse = await _uow.Products.IsProductInUseAsync(request.Id, cancellationToken);
-            // if (isProductInUse)
-            // {
-            //     return Result.Error("Cannot delete product as it is associated with existing orders");
-            // }
-
             await _uow.Products.DeleteAsync(product, cancellationToken);
             await _uow.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Product with ID {ProductId} was deleted", request.Id);
-            return Result.Success();
+            return Result.Success(true);
         }
         catch (Exception ex)
         {

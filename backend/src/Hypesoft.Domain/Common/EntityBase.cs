@@ -33,7 +33,19 @@ public abstract class EntityBase
 
     public void SetCreatedBy(string userId)
     {
+        if (string.IsNullOrWhiteSpace(userId))
+            throw new ArgumentException("User ID cannot be null or empty", nameof(userId));
+            
         CreatedBy = userId;
+        UpdatedBy = userId;
+    }
+    
+    public void SetLastModifiedBy(string userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+            throw new ArgumentException("User ID cannot be null or empty", nameof(userId));
+            
+        UpdatedAt = DateTime.UtcNow;
         UpdatedBy = userId;
     }
 }

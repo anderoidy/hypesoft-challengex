@@ -3,4 +3,4 @@ using MediatR;
 
 namespace Hypesoft.Application.Commands;
 
-public record DeleteProductCommand(int Id) : IRequest<Result>;
+public record DeleteProductCommand(Guid Id) : IRequest<Result<bool>>;

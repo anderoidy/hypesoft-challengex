@@ -30,7 +30,6 @@ public class ProductRepository : IProductRepository
     public async Task<bool> IsBarcodeUniqueAsync(string barcode, CancellationToken cancellationToken = default)
         => !await _context.Products.AnyAsync(p => p.Barcode == barcode, cancellationToken);
 
-    // Delegated methods to generic-like behavior
     public async Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => await _context.Products.FindAsync([id], cancellationToken);
 
@@ -38,7 +37,25 @@ public class ProductRepository : IProductRepository
         => Task.FromResult<IEnumerable<Product>>(_context.Products.AsNoTracking());
 
     public void Update(Product entity) => _context.Products.Update(entity);
+    
+    public async Task UpdateAsync(Product product, CancellationToken cancellationToken = default)
+    {
+        _context.Products.Update(product);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+    
     public void Remove(Product entity) => _context.Products.Remove(entity);
+    
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await GetByIdAsync(id, cancellationToken);
+        if (entity == null) return false;
+        
+        _context.Products.Remove(entity);
+        await _context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+    
     public async Task RemoveAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await GetByIdAsync(id, cancellationToken);
@@ -46,8 +63,13 @@ public class ProductRepository : IProductRepository
     }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => _context.SaveChangesAsync(cancellationToken);
-
-    // Other interface methods throw NotImplementedException for brevity
-    // Ideally implement all from IRepository, or create a BaseRepository
-    {{ ... }}
+    
+    // Outros métodos da interface IRepository que podem ser implementados posteriormente
+    public Task<int> CountAsync(CancellationToken cancellationToken = default) => _context.Products.CountAsync(cancellationToken);
+    
+    public Task<int> CountAsync(System.Linq.Expressions.Expression<Func<Product, bool>> predicate, CancellationToken cancellationToken = default)
+        => _context.Products.CountAsync(predicate, cancellationToken);
+        
+    public Task<bool> ExistsAsync(System.Linq.Expressions.Expression<Func<Product, bool>> predicate, CancellationToken cancellationToken = default)
+        => _context.Products.AnyAsync(predicate, cancellationToken);
 }

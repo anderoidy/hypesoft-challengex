@@ -165,7 +165,7 @@ public class ProductVariant : EntityBase
         Name = name.Trim();
     }
 
-    private void SetProductId(Guid productId)
+    public void SetProductId(Guid productId)
     {
         if (productId == Guid.Empty)
             throw new DomainException("O ID do produto não pode ser vazio");

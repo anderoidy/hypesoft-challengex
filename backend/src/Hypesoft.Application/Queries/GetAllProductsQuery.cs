@@ -8,7 +8,7 @@ namespace Hypesoft.Application.Queries;
 /// <summary>
 /// Query para obter uma lista paginada de produtos com suporte a busca
 /// </summary>
-public class GetAllProductsQuery : IRequest<PaginatedList<ProductDto>>
+public class GetAllProductsQuery : IRequest<Result<PaginatedList<ProductDto>>>
 {
     /// <summary>
     /// Termo de busca opcional para filtrar produtos por nome ou descrição

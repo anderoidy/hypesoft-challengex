@@ -9,18 +9,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-
-    <!-- Pacotes principais -->
-    <PackageReference Include="Ardalis.Result"  />
-    <PackageReference Include="AutoMapper"  />
-    <PackageReference Include="FluentResults"  />
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions"  />
-    <PackageReference Include="MediatR"  />
-    <PackageReference Include="Microsoft.EntityFrameworkCore"  />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools"  />
+    <!-- Pacotes principais -->    <PackageReference Include="AutoMapper" />
+    <PackageReference Include="FluentResults" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="MediatR" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <!-- Pacotes do Microsoft -->
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection"  />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"  />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,8 +29,8 @@
 
   <ItemGroup>
     <Using Include="Ardalis.Result" />
-    <Using Include="Ardalis.Result" Alias="Result" />
     <Using Include="System.Threading" />
   </ItemGroup>
 
 </Project>
+

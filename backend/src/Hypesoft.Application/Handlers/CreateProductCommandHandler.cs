@@ -1,21 +1,24 @@
 using Ardalis.Result;
 using AutoMapper;
-using MediatR;
-using Microsoft.Extensions.Logging;
 using Hypesoft.Application.Commands;
 using Hypesoft.Application.Common.Interfaces;
+using Hypesoft.Application.DTOs;
 using Hypesoft.Domain.Entities;
-using Hypesoft.Domain.Repositories;
+using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Hypesoft.Application.Handlers;
 
-public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductCommand, Result<Guid>>
+public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand, Result<Guid>>
 {
     private readonly IApplicationUnitOfWork _uow;
     private readonly IMapper _mapper;
     private readonly ILogger<CreateProductCommandHandler> _logger;
 
-    public CreateProductCommandHandler(IApplicationUnitOfWork uow, IMapper mapper, ILogger<CreateProductCommandHandler> logger)
+    public CreateProductCommandHandler(
+        IApplicationUnitOfWork uow,
+        IMapper mapper,
+        ILogger<CreateProductCommandHandler> logger)
     {
         _uow = uow;
         _mapper = mapper;
@@ -26,19 +29,26 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
     {
         try
         {
-            // Validação de unicidade de SKU e Barcode
-            if (!string.IsNullOrWhiteSpace(request.Sku) && !await _uow.Products.IsSkuUniqueAsync(request.Sku, cancellationToken))
-                return Result.Invalid(new() { { nameof(request.Sku), "SKU já existe." } });
+            // Validate SKU uniqueness only if SKU is provided
+            if (!string.IsNullOrEmpty(request.Sku) && 
+                await _uow.Products.IsSkuUniqueAsync(request.Sku, cancellationToken) == false)
+            {
+                return Result.Invalid(new ValidationError
+                {
+                    Identifier = nameof(request.Sku),
+                    ErrorMessage = "SKU must be unique"
+                });
+            }
 
-            if (!string.IsNullOrWhiteSpace(request.Barcode) && !await _uow.Products.IsBarcodeUniqueAsync(request.Barcode, cancellationToken))
-                return Result.Invalid(new() { { nameof(request.Barcode), "Código de barras já existe." } });
-
-            // Validação de categoria
+            // Check if category exists
             var category = await _uow.Categories.GetByIdAsync(request.CategoryId, cancellationToken);
             if (category == null)
-                return Result.Invalid(new() { { nameof(request.CategoryId), "Categoria não encontrada." } });
+            {
+                _logger.LogWarning("Category with ID {CategoryId} not found", request.CategoryId);
+                return Result.NotFound($"Category with ID {request.CategoryId} not found");
+            }
 
-            // Criação do produto
+            // Create the product
             var product = new Product(
                 request.Name,
                 request.Description,
@@ -57,16 +67,19 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
                 request.IsPublished,
                 request.UserId);
 
+            // Save the product
             await _uow.Products.AddAsync(product, cancellationToken);
             await _uow.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Produto criado com ID {ProductId}", product.Id);
+            _logger.LogInformation("Created product with ID {ProductId}", product.Id);
+
+            // Return product ID
             return Result.Success(product.Id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao criar produto");
-            return Result.Error("Erro inesperado ao criar produto.");
+            _logger.LogError(ex, "Error creating product");
+            return Result.Error($"An error occurred while creating the product: {ex.Message}");
         }
     }
 }

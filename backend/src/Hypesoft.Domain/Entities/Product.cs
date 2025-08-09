@@ -6,7 +6,8 @@ namespace Hypesoft.Domain.Entities;
 
 public class Product : EntityBase
 {
-    public string Name { get; private set; }
+    // Properties with private setters for encapsulation
+    public string Name { get; private set; } = string.Empty;
     public string? Description { get; private set; }
     public string? ImageUrl { get; private set; }
     public decimal Price { get; private set; }
@@ -22,13 +23,13 @@ public class Product : EntityBase
     public bool IsPublished { get; private set; }
     public DateTime? PublishedAt { get; private set; }
     
-    // Relacionamentos
+    // Navigation properties
     public Guid CategoryId { get; private set; }
     public virtual Category Category { get; private set; } = null!;
     public virtual ICollection<ProductVariant> Variants { get; private set; } = new List<ProductVariant>();
     public virtual ICollection<ProductTag> ProductTags { get; private set; } = new List<ProductTag>();
 
-    // Construtor privado para o EF Core
+    // Private constructor for EF Core
     protected Product() { }
 
     public Product(
@@ -50,19 +51,16 @@ public class Product : EntityBase
         string? userId = null)
     {
         SetName(name);
-        Description = description?.Trim();
+        SetDescription(description);
         SetPrice(price);
-        SetDiscountPrice(discountPrice);
-        SetStockQuantity(stockQuantity);
+        SetCategory(categoryId);
         SetSku(sku);
         SetBarcode(barcode);
-        ImageUrl = imageUrl;
-        Weight = weight > 0 ? weight : null;
-        Height = height > 0 ? height : null;
-        Width = width > 0 ? width : null;
-        Length = length > 0 ? length : null;
-        IsFeatured = isFeatured;
-        CategoryId = categoryId;
+        SetDiscountPrice(discountPrice);
+        SetStockQuantity(stockQuantity);
+        SetImageUrl(imageUrl);
+        SetDimensions(weight, height, width, length);
+        SetIsFeatured(isFeatured);
         
         if (isPublished)
             Publish(userId);
@@ -73,229 +71,162 @@ public class Product : EntityBase
             SetCreatedBy(userId);
     }
 
-    // Métodos de negócio
+    // Business methods for updating properties
     public void Update(
         string name,
         string? description,
         decimal price,
         Guid categoryId,
-        decimal? discountPrice = null,
-        int? stockQuantity = null,
-        string? sku = null,
-        string? barcode = null,
         string? imageUrl = null,
-        float? weight = null,
-        float? height = null,
-        float? width = null,
-        float? length = null,
+        int? stockQuantity = null,
+        decimal? discountPrice = null,
         bool? isFeatured = null,
         string? userId = null)
     {
         SetName(name);
-        Description = description?.Trim();
+        SetDescription(description);
         SetPrice(price);
+        SetCategory(categoryId);
         
-        if (discountPrice.HasValue)
-            SetDiscountPrice(discountPrice);
+        if (imageUrl != null)
+            SetImageUrl(imageUrl);
             
         if (stockQuantity.HasValue)
             SetStockQuantity(stockQuantity.Value);
             
-        if (sku != null)
-            SetSku(sku);
-            
-        if (barcode != null)
-            SetBarcode(barcode);
-        
-        if (imageUrl != null)
-            ImageUrl = imageUrl;
-            
-        if (weight.HasValue)
-            Weight = weight > 0 ? weight : null;
-            
-        if (height.HasValue)
-            Height = height > 0 ? height : null;
-            
-        if (width.HasValue)
-            Width = width > 0 ? width : null;
-            
-        if (length.HasValue)
-            Length = length > 0 ? length : null;
+        if (discountPrice.HasValue)
+            SetDiscountPrice(discountPrice);
             
         if (isFeatured.HasValue)
-            IsFeatured = isFeatured.Value;
+            SetIsFeatured(isFeatured.Value);
             
-        CategoryId = categoryId;
-
         if (userId != null)
-            UpdateAuditFields(userId);
+            SetLastModifiedBy(userId);
     }
 
-    public void Publish(string? userId = null)
-    {
-        if (IsPublished)
-            return;
-            
-        IsPublished = true;
-        PublishedAt = DateTime.UtcNow;
-        
-        if (userId != null)
-            UpdateAuditFields(userId);
-    }
-
-    public void Unpublish(string? userId = null)
-    {
-        if (!IsPublished)
-            return;
-            
-        IsPublished = false;
-        PublishedAt = null;
-        
-        if (userId != null)
-            UpdateAuditFields(userId);
-    }
-
-    public void AddStock(int quantity, string? userId = null)
-    {
-        if (quantity <= 0)
-            throw new DomainException("A quantidade deve ser maior que zero");
-            
-        StockQuantity += quantity;
-        
-        if (userId != null)
-            UpdateAuditFields(userId);
-    }
-
-    public void RemoveStock(int quantity, string? userId = null)
-    {
-        if (quantity <= 0)
-            throw new DomainException("A quantidade deve ser maior que zero");
-            
-        if (StockQuantity < quantity)
-            throw new DomainException("Quantidade em estoque insuficiente");
-            
-        StockQuantity -= quantity;
-        
-        if (userId != null)
-            UpdateAuditFields(userId);
-    }
-
-    public void SetFeatured(bool isFeatured, string? userId = null)
-    {
-        IsFeatured = isFeatured;
-        
-        if (userId != null)
-            UpdateAuditFields(userId);
-    }
-
-    // Métodos privados para validação
-    private void SetName(string name)
+    // Individual property setters with validation
+    public void SetName(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
-            throw new DomainException("O nome do produto não pode ser vazio");
+            throw new DomainException("Product name cannot be empty");
             
         Name = name.Trim();
     }
-
-    private void SetPrice(decimal price)
+    
+    public void SetDescription(string? description)
+    {
+        Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+    }
+    
+    public void SetPrice(decimal price)
     {
         if (price < 0)
-            throw new DomainException("O preço não pode ser negativo");
+            throw new DomainException("Price cannot be negative");
             
         Price = price;
     }
-
-    private void SetDiscountPrice(decimal? discountPrice)
+    
+    public void SetDiscountPrice(decimal? discountPrice)
     {
-        if (discountPrice.HasValue)
-        {
-            if (discountPrice.Value < 0)
-                throw new DomainException("O preço com desconto não pode ser negativo");
-                
-            if (discountPrice.Value >= Price)
-                throw new DomainException("O preço com desconto deve ser menor que o preço normal");
-        }
-        
+        if (discountPrice.HasValue && discountPrice < 0)
+            throw new DomainException("Discount price cannot be negative");
+            
+        if (discountPrice.HasValue && discountPrice > Price)
+            throw new DomainException("Discount price cannot be greater than the regular price");
+            
         DiscountPrice = discountPrice;
     }
-
-    private void SetStockQuantity(int quantity)
+    
+    public void SetStockQuantity(int quantity)
     {
         if (quantity < 0)
-            throw new DomainException("A quantidade em estoque não pode ser negativa");
+            throw new DomainException("Stock quantity cannot be negative");
             
         StockQuantity = quantity;
     }
-
-    private void SetSku(string? sku)
+    
+    public void SetSku(string? sku)
     {
-        if (!string.IsNullOrWhiteSpace(sku) && sku.Length > 50)
-            throw new DomainException("O SKU não pode ter mais de 50 caracteres");
-            
-        Sku = sku?.Trim();
+        Sku = string.IsNullOrWhiteSpace(sku) ? null : sku.Trim();
     }
-
-    private void SetBarcode(string? barcode)
+    
+    public void SetBarcode(string? barcode)
     {
-        if (!string.IsNullOrWhiteSpace(barcode) && barcode.Length > 50)
-            throw new DomainException("O código de barras não pode ter mais de 50 caracteres");
-            
-        Barcode = barcode?.Trim();
+        Barcode = string.IsNullOrWhiteSpace(barcode) ? null : barcode.Trim();
     }
-
-    // Métodos para gerenciar variantes
-    public void AddVariant(ProductVariant variant, string? userId = null)
+    
+    public void SetImageUrl(string? imageUrl)
     {
-        if (variant == null)
-            throw new ArgumentNullException(nameof(variant));
+        // Basic URL validation could be added here
+        ImageUrl = string.IsNullOrWhiteSpace(imageUrl) ? null : imageUrl.Trim();
+    }
+    
+    public void SetDimensions(float? weight, float? height, float? width, float? length)
+    {
+        if (weight.HasValue && weight <= 0) throw new DomainException("Weight must be positive");
+        if (height.HasValue && height <= 0) throw new DomainException("Height must be positive");
+        if (width.HasValue && width <= 0) throw new DomainException("Width must be positive");
+        if (length.HasValue && length <= 0) throw new DomainException("Length must be positive");
+        
+        Weight = weight;
+        Height = height;
+        Width = width;
+        Length = length;
+    }
+    
+    public void SetCategory(Guid categoryId)
+    {
+        if (categoryId == Guid.Empty)
+            throw new DomainException("Category ID cannot be empty");
             
-        if (Variants.Any(v => v.Id == variant.Id))
-            return; // Já existe uma variante com este ID
+        CategoryId = categoryId;
+    }
+    
+    public void SetIsFeatured(bool isFeatured)
+    {
+        IsFeatured = isFeatured;
+    }
+    
+    public void Publish(string? userId = null)
+    {
+        IsPublished = true;
+        PublishedAt = DateTime.UtcNow;
+        if (userId != null)
+            SetLastModifiedBy(userId);
+    }
+    
+    public void Unpublish()
+    {
+        IsPublished = false;
+        PublishedAt = null;
+    }
+    
+    // Additional business methods can be added here
+    public void AddVariant(ProductVariant variant)
+    {
+        if (variant == null) throw new ArgumentNullException(nameof(variant));
+        
+        if (Variants.Any(v => v.Name.Equals(variant.Name, StringComparison.OrdinalIgnoreCase)))
+            throw new DomainException($"A variant with name '{variant.Name}' already exists");
             
-        variant.SetProduct(this);
+        variant.SetProductId(Id);
         Variants.Add(variant);
+    }
+    
+    public void AddTag(Tag tag)
+    {
+        if (tag == null) throw new ArgumentNullException(nameof(tag));
         
-        if (userId != null)
-            UpdateAuditFields(userId);
-    }
-
-    public void RemoveVariant(Guid variantId, string? userId = null)
-    {
-        var variant = Variants.FirstOrDefault(v => v.Id == variantId);
-        if (variant != null)
-        {
-            Variants.Remove(variant);
-            
-            if (userId != null)
-                UpdateAuditFields(userId);
-        }
-    }
-
-    // Métodos para gerenciar tags
-    public void AddTag(Tag tag, string? userId = null)
-    {
-        if (tag == null)
-            throw new ArgumentNullException(nameof(tag));
-            
         if (ProductTags.Any(pt => pt.TagId == tag.Id))
-            return; // Já tem esta tag
+            return; // Tag already added
             
-        var productTag = new ProductTag(this, tag);
-        ProductTags.Add(productTag);
-        
-        if (userId != null)
-            UpdateAuditFields(userId);
+        ProductTags.Add(new ProductTag(Id, tag.Id));
     }
-
-    public void RemoveTag(Guid tagId, string? userId = null)
+    
+    public void RemoveTag(Guid tagId)
     {
         var productTag = ProductTags.FirstOrDefault(pt => pt.TagId == tagId);
         if (productTag != null)
-        {
             ProductTags.Remove(productTag);
-            
-            if (userId != null)
-                UpdateAuditFields(userId);
-        }
     }
 }
