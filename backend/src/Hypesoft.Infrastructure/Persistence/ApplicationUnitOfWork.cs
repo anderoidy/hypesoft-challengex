@@ -3,6 +3,10 @@ using Hypesoft.Domain.Common.Interfaces;
 using Hypesoft.Domain.Entities;
 using Hypesoft.Domain.Repositories;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.EntityFrameworkCore; 
+using Hypesoft.Domain.Common;
+using System.Data; 
+using Hypesoft.Infrastructure.Repositories;
 
 namespace Hypesoft.Infrastructure.Persistence;
 
@@ -17,9 +21,9 @@ public sealed class ApplicationUnitOfWork : IApplicationUnitOfWork
     private IDbContextTransaction? _currentTransaction;
 
     public ApplicationUnitOfWork(ApplicationDbContext context,
-                                 IProductRepository products,
-                                 ICategoryRepository categories,
-                                 ITagRepository tags)
+                               IProductRepository products,
+                               ICategoryRepository categories,
+                               ITagRepository tags)
     {
         _context = context;
         _products = products;
@@ -31,7 +35,8 @@ public sealed class ApplicationUnitOfWork : IApplicationUnitOfWork
     public ICategoryRepository Categories => _categories ?? throw new InvalidOperationException("Repository not resolved");
     public ITagRepository Tags => _tags ?? throw new InvalidOperationException("Repository not resolved");
 
-    public IRepository<TEntity> Repository<TEntity>() where TEntity : EntityBase => new RepositoryBase<TEntity>(_context);
+    public IRepository<TEntity> Repository<TEntity>() where TEntity : EntityBase 
+        => new RepositoryBase<TEntity>(_context);
 
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
         => _currentTransaction = await _context.Database.BeginTransactionAsync(cancellationToken);
@@ -52,53 +57,80 @@ public sealed class ApplicationUnitOfWork : IApplicationUnitOfWork
         _currentTransaction = null;
     }
 
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => _context.SaveChangesAsync(cancellationToken);
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        => await _context.SaveChangesAsync(cancellationToken);
 
     public void RejectChanges()
     {
-        foreach (var entry in _context.ChangeTracker.Entries().Where(e => e.State != Microsoft.EntityFrameworkCore.EntityState.Unchanged))
+        var changedEntries = _context.ChangeTracker
+            .Entries()
+            .Where(e => e.State != EntityState.Unchanged);
+
+        foreach (var entry in changedEntries)
         {
             switch (entry.State)
             {
-                case Microsoft.EntityFrameworkCore.EntityState.Modified:
-                    entry.CurrentValues.SetValues(entry.OriginalValues);
-                    entry.State = Microsoft.EntityFrameworkCore.EntityState.Unchanged;
+                case EntityState.Added:
+                    entry.State = EntityState.Detached;
                     break;
-                case Microsoft.EntityFrameworkCore.EntityState.Added:
-                    entry.State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-                    break;
-                case Microsoft.EntityFrameworkCore.EntityState.Deleted:
-                    entry.State = Microsoft.EntityFrameworkCore.EntityState.Unchanged;
+                case EntityState.Modified:
+                case EntityState.Deleted:
+                    entry.Reload();
                     break;
             }
         }
     }
 
     public void DetachAllEntities()
-        => _context.ChangeTracker.Clear();
+    {
+        var changedEntries = _context.ChangeTracker
+            .Entries()
+            .Where(e => e.State != EntityState.Detached)
+            .ToList();
 
-    public Task<int> ExecuteSqlCommandAsync(string sql, params object[] parameters)
-        => _context.Database.ExecuteSqlRawAsync(sql, parameters);
+        foreach (var entry in changedEntries)
+        {
+            entry.State = EntityState.Detached;
+        }
+    }
 
-    public Task<bool> CanConnectAsync(CancellationToken cancellationToken = default)
-        => _context.Database.CanConnectAsync(cancellationToken);
+    public async Task<int> ExecuteSqlCommandAsync(string sql, params object[] parameters)
+        => await _context.Database.ExecuteSqlRawAsync(sql, parameters);
 
-    // Application-specific helpers
-    public Task<bool> IsCategoryInUseAsync(Guid categoryId, CancellationToken cancellationToken = default)
-        => _context.Products.AnyAsync(p => p.CategoryId == categoryId, cancellationToken);
+    public async Task<bool> CanConnectAsync(CancellationToken cancellationToken = default)
+        => await _context.Database.CanConnectAsync(cancellationToken);
 
-    public Task<bool> IsTagInUseAsync(Guid tagId, CancellationToken cancellationToken = default)
-        => _context.Products.AnyAsync(p => p.ProductTags.Any(pt => pt.TagId == tagId), cancellationToken);
+    public async Task<bool> IsCategoryInUseAsync(Guid categoryId, CancellationToken cancellationToken = default)
+        => await _context.Products.AnyAsync(p => p.CategoryId == categoryId, cancellationToken);
 
-    public Task<int> GetTotalProductCountAsync(CancellationToken cancellationToken = default)
-        => _context.Products.CountAsync(cancellationToken);
+    public async Task<bool> IsTagInUseAsync(Guid tagId, CancellationToken cancellationToken = default)
+    {
+        // Verifica se a tag está sendo usada em algum produto
+        return await _context.Products
+            .AnyAsync(p => p.ProductTags.Any(pt => pt.TagId == tagId), cancellationToken);
+    }
 
-    public Task<int> GetTotalCategoryCountAsync(CancellationToken cancellationToken = default)
-        => _context.Categories.CountAsync(cancellationToken);
+    public async Task<int> GetTotalProductCountAsync(CancellationToken cancellationToken = default)
+        => await _context.Products.CountAsync(cancellationToken);
 
-    public Task<int> GetTotalTagCountAsync(CancellationToken cancellationToken = default)
-        => _context.Tags.CountAsync(cancellationToken);
+    public async Task<int> GetTotalCategoryCountAsync(CancellationToken cancellationToken = default)
+        => await _context.Categories.CountAsync(cancellationToken);
 
-    public void Dispose() => _context.Dispose();
-    public ValueTask DisposeAsync() => _context.DisposeAsync();
+    public async Task<int> GetTotalTagCountAsync(CancellationToken cancellationToken = default)
+        => await _context.Tags.CountAsync(cancellationToken);
+
+    public void Dispose()
+    {
+        _currentTransaction?.Dispose();
+        _context.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_currentTransaction != null)
+        {
+            await _currentTransaction.DisposeAsync();
+        }
+        await _context.DisposeAsync();
+    }
 }

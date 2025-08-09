@@ -23,6 +23,7 @@ public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand,
     {
         try
         {
+            // Usando Remove e SaveChangesAsync em vez de DeleteAsync
             var product = await _uow.Products.GetByIdAsync(request.Id, cancellationToken);
             if (product == null)
             {
@@ -30,7 +31,7 @@ public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand,
                 return Result.NotFound($"Product with ID {request.Id} not found");
             }
 
-            await _uow.Products.DeleteAsync(product, cancellationToken);
+            _uow.Products.Remove(product);
             await _uow.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Product with ID {ProductId} was deleted", request.Id);

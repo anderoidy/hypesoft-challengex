@@ -1,8 +1,8 @@
+using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using Hypesoft.Domain.Common;
 using Hypesoft.Domain.Common.Interfaces;
 using Hypesoft.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 
 namespace Hypesoft.Infrastructure.Repositories;
 
@@ -72,36 +72,36 @@ public class RepositoryBase<TEntity> : IRepository<TEntity> where TEntity : Enti
         return entity;
     }
 
-    public async Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
+    public virtual async Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
         => await _dbSet.AddRangeAsync(entities, cancellationToken);
 
-    public void Update(Tentity entity) => _dbSet.Update(entity);
+    public virtual void Update(TEntity entity) => _dbSet.Update(entity);
 
-    public void UpdateRange(IEnumerable<TEntity> entities) => _dbSet.UpdateRange(entities);
+    public virtual void UpdateRange(IEnumerable<TEntity> entities) => _dbSet.UpdateRange(entities);
 
-    public void Remove(TEntity entity) => _dbSet.Remove(entity);
+    public virtual void Remove(TEntity entity) => _dbSet.Remove(entity);
 
-    public void RemoveRange(IEnumerable<TEntity> entities) => _dbSet.RemoveRange(entities);
+    public virtual void RemoveRange(IEnumerable<TEntity> entities) => _dbSet.RemoveRange(entities);
 
-    public async Task RemoveAsync(Guid id, CancellationToken cancellationToken = default)
+    public virtual async Task RemoveAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await GetByIdAsync(id, cancellationToken);
         if (entity != null) _dbSet.Remove(entity);
     }
 
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => _context.SaveChangesAsync(cancellationToken);
+    public virtual Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => _context.SaveChangesAsync(cancellationToken);
 
-    public void Detach(TEntity entity) => _context.Entry(entity).State = EntityState.Detached;
+    public virtual void Detach(TEntity entity) => _context.Entry(entity).State = EntityState.Detached;
 
-    public void DetachAll()
+    public virtual void DetachAll()
     {
         var entries = _context.ChangeTracker.Entries().ToList();
         foreach (var entry in entries) entry.State = EntityState.Detached;
     }
 
-    public async Task<IEnumerable<TEntity>> FromSqlAsync(string sql, params object[] parameters)
+    public virtual async Task<IEnumerable<TEntity>> FromSqlAsync(string sql, params object[] parameters)
         => await _dbSet.FromSqlRaw(sql, parameters).ToListAsync();
 
-    public Task<int> ExecuteSqlCommandAsync(string sql, params object[] parameters)
+    public virtual Task<int> ExecuteSqlCommandAsync(string sql, params object[] parameters)
         => _context.Database.ExecuteSqlRawAsync(sql, parameters);
 }

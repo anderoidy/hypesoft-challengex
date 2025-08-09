@@ -10,14 +10,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+
+    
     <!-- Pacotes essenciais para Domain -->
-    <PackageReference Include="Ardalis.GuardClauses"  />
-    <PackageReference Include="Ardalis.Result"  />
-    <PackageReference Include="MediatR"  />
+    <PackageReference Include="Ardalis.GuardClauses" />
+    <PackageReference Include="Ardalis.Result" />
+    <PackageReference Include="MediatR" />
     
     <!-- Para manter consistência com outros projetos -->
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection"  />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"  />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
