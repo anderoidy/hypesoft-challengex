@@ -1,0 +1,70 @@
+name: .NET
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  DOTNET_VERSION: '7.0.x'
+  MONGODB_CONNECTION_STRING: ${{ secrets.MONGODB_CONNECTION_STRING || 'mongodb://localhost:27017' }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET || 'YOUR_SECRET_KEY_HERE_AT_LEAST_32_CHARACTERS_LONG' }}
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongosh --eval 'db.serverStatus().ok'"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install dependencies
+      run: dotnet restore
+      working-directory: ./backend
+      
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+      working-directory: ./backend
+      
+    - name: Test
+      run: dotnet test --no-build --verbosity normal --configuration Release --collect:"XPlat Code Coverage"
+      working-directory: ./backend
+      env:
+        MONGODB_CONNECTION_STRING: ${{ env.MONGODB_CONNECTION_STRING }}
+        JWT_SECRET: ${{ env.JWT_SECRET }}
+        ASPNETCORE_ENVIRONMENT: Test
+        
+    - name: Publish Test Results
+      if: always()
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      with:
+        files: |
+          ./backend/**/TestResults/*.trx
+          ./backend/**/TestResults/**/*.trx
+          
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: |
+          ./backend/**/TestResults/
+          !**/bin/**
+          !**/obj/**

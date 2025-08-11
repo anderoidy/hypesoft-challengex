@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Ardalis.Result;
 using FluentAssertions;
 using Hypesoft.Application.Commands;
+using Hypesoft.Application.Common.Interfaces;
 using Hypesoft.Application.Handlers;
 using Hypesoft.Application.UnitTests.TestData;
 using Hypesoft.Domain.Entities;

@@ -2,13 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Hypesoft.Application.DTOs;
+using Hypesoft.Application.Features.Products.Queries.GetAllProducts;
 using Hypesoft.Domain.Entities;
 using Hypesoft.Infrastructure.Data;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Hypesoft.Application.Common.Interfaces;
 using Xunit;
 
 namespace Hypesoft.IntegrationTests.Controllers;
@@ -571,5 +576,67 @@ public class ProductsControllerTests : TestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var error = await response.Content.ReadAsStringAsync();
         error.Should().Contain("Categoria não encontrada");
+    }
+
+    [Fact]
+    public async Task GetProducts_WithoutAuthentication_ReturnsUnauthorized()
+    {
+        // Arrange
+        var client = new HttpClient();
+        
+        // Act
+        var response = await client.GetAsync(BaseUrl);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetProducts_WithValidToken_ReturnsOk()
+    {
+        // Arrange
+        await AuthenticateAsync();
+        
+        // Act
+        var response = await TestClient.GetAsync(BaseUrl);
+        
+        // Assert
+        response.EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        
+        var content = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<PaginatedList<ProductDto>>(content, 
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            
+        Assert.NotNull(result);
+        Assert.NotNull(result.Items);
+    }
+
+    [Fact]
+    public async Task GetProducts_WithExpiredToken_ReturnsUnauthorized()
+    {
+        // Arrange - Create an expired token
+        var expiredToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjJ9.1B7X0CJZ3Z0Z5KZQ0Z5KZQ0Z5KZQ0Z5KZQ0Z5KZQ0Z5KZQ";
+        TestClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", expiredToken);
+        
+        // Act
+        var response = await TestClient.GetAsync(BaseUrl);
+        
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetProducts_WithInvalidToken_ReturnsUnauthorized()
+    {
+        // Arrange - Create an invalid token
+        var invalidToken = "invalid.token.here";
+        TestClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", invalidToken);
+        
+        // Act
+        var response = await TestClient.GetAsync(BaseUrl);
+        
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 }

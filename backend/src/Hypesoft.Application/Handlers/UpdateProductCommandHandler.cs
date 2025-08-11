@@ -4,11 +4,11 @@ using Hypesoft.Application.Commands;
 using Hypesoft.Application.Common.Interfaces;
 using Hypesoft.Application.DTOs;
 using Hypesoft.Domain.Entities;
-using Hypesoft.Domain.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using System.Data;
 
 namespace Hypesoft.Application.Handlers;
 
@@ -47,7 +47,7 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
                 return Result.Invalid(errors);
             }
 
-            // Get the existing product
+            // Get existing product
             var product = await _uow.Products.GetByIdAsync(request.Id, cancellationToken);
             if (product == null)
             {
@@ -55,15 +55,18 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
                 return Result.NotFound($"Product with ID {request.Id} not found");
             }
 
-            // Check if SKU is being changed and if the new SKU is unique
-            if (!string.IsNullOrEmpty(request.Sku) && 
-                !string.Equals(product.Sku, request.Sku, StringComparison.OrdinalIgnoreCase) &&
-                await _uow.Products.IsSkuUniqueAsync(request.Sku, cancellationToken) == false)
+            // Check if category exists if it's being updated
+            if (request.CategoryId != product.CategoryId)
             {
-                return Result.Error("SKU is already in use by another product");
+                var categoryExists = await _uow.Categories.ExistsAsync(c => c.Id == request.CategoryId, cancellationToken);
+                if (!categoryExists)
+                {
+                    _logger.LogWarning("Category with ID {CategoryId} not found", request.CategoryId);
+                    return Result.NotFound($"Category with ID {request.CategoryId} not found");
+                }
             }
 
-            // Update product properties
+            // Update product properties using the entity's update method
             product.Update(
                 request.Name,
                 request.Description,
@@ -75,25 +78,26 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
                 request.IsFeatured,
                 request.UserId);
 
-            // Save changes - Usando o método Update da interface IRepository
-            _uow.Products.Update(product);
+            // Save changes
             await _uow.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Updated product with ID {ProductId}", product.Id);
+            // Map to DTO using AutoMapper with the CategoryName from context
+            var category = await _uow.Categories.GetByIdAsync(product.CategoryId, cancellationToken);
+            var productDto = _mapper.Map<ProductDto>(product, opts => 
+                opts.Items["CategoryName"] = category?.Name);
 
-            // Map to DTO and return
-            var resultDto = _mapper.Map<ProductDto>(product);
-            return Result.Success(resultDto);
+            _logger.LogInformation("Updated product with ID {ProductId}", product.Id);
+            return Result.Success(productDto);
         }
-        catch (DomainException ex)
+        catch (DBConcurrencyException ex)
         {
-            _logger.LogWarning(ex, "Domain error updating product: {Message}", ex.Message);
-            return Result.Error(ex.Message);
+            _logger.LogWarning(ex, "Concurrency error updating product: {Message}", ex.Message);
+            return Result.Error("A concurrency error occurred while updating the product. Please refresh and try again.");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating product with ID {ProductId}", request.Id);
-            return Result.Error("An error occurred while updating the product");
+            _logger.LogError(ex, "Error updating product: {Message}", ex.Message);
+            return Result.Error($"An error occurred while updating the product: {ex.Message}");
         }
     }
 }

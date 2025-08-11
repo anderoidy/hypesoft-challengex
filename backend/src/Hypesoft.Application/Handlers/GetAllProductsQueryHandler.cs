@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Result;
 using AutoMapper;
-using Hypesoft.Application.Common;
 using Hypesoft.Application.Common.Interfaces;
 using Hypesoft.Application.DTOs;
 using Hypesoft.Application.Queries;
@@ -13,6 +12,8 @@ using Hypesoft.Domain.Entities;
 using Hypesoft.Domain.Repositories;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Hypesoft.Application.Common;
+using Hypesoft.Application.Common.Models;
 
 namespace Hypesoft.Application.Handlers;
 

@@ -1,7 +1,7 @@
 using Ardalis.Result;
-using Hypesoft.Application.Common;
 using Hypesoft.Application.DTOs;
 using MediatR;
+using Hypesoft.Application.Common.Models;
 
 namespace Hypesoft.Application.Queries;
 

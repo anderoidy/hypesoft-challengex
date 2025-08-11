@@ -43,14 +43,9 @@ public sealed class GetProductByIdQueryHandler : IRequestHandler<GetProductByIdQ
             // Busca a categoria associada ao produto
             var category = await _uow.Categories.GetByIdAsync(product.CategoryId, cancellationToken);
             
-            // Mapeia o produto para DTO
-            var productDto = _mapper.Map<ProductDto>(product);
-            
-            // Adiciona o nome da categoria ao DTO, se existir
-            if (category != null)
-            {
-                productDto.CategoryName = category.Name;
-            }
+            // Mapeia o produto para DTO e inclui o nome da categoria
+            var productDto = _mapper.Map<ProductDto>(product, opts => 
+                opts.Items["CategoryName"] = category?.Name);
 
             _logger.LogInformation("Produto com ID {ProductId} encontrado com sucesso", request.Id);
             return Result.Success(productDto);
@@ -58,7 +53,7 @@ public sealed class GetProductByIdQueryHandler : IRequestHandler<GetProductByIdQ
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erro ao buscar produto com ID {ProductId}", request.Id);
-            return Result.Error($"Ocorreu um erro ao buscar o produto com ID {request.Id}.");
+            return Result.Error($"Ocorreu um erro ao buscar o produto: {ex.Message}");
         }
     }
 }

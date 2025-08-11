@@ -7,5 +7,6 @@ public interface ITagRepository : INamedEntityRepository<Tag>
 {
     // Métodos específicos de Tag podem ser adicionados aqui
     Task<IEnumerable<Tag>> GetActiveTagsAsync(CancellationToken cancellationToken = default);
+    Task<IEnumerable<Tag>> GetTagsByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default);
     Task<IEnumerable<Tag>> GetTagsByProductIdAsync(Guid productId, CancellationToken cancellationToken = default);
 }

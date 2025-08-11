@@ -119,8 +119,13 @@ public class UsersController : BaseAuthController
                 await getUserResponse.Content.ReadAsStringAsync());
 
             // Atualize apenas os campos fornecidos
-            if (request.FirstName != null) user.FirstName = request.FirstName;
+#pragma warning disable CS8602 // Desreferência de uma referência possivelmente nula.
+            if (request.FirstName != null) user.FirstName = request.FirstName ;
+#pragma warning restore CS8602 // Desreferência de uma referência possivelmente nula.
+#pragma warning disable CS8602 // Desreferência de uma referência possivelmente nula.
             if (request.LastName != null) user.LastName = request.LastName;
+#pragma warning restore CS8602 // Desreferência de uma referência possivelmente nula.
+#pragma warning disable CS8602 // Desreferência de uma referência possivelmente nula
             if (request.Email != null) user.Email = request.Email;
             
             // Atualize o usuário no Keycloak

@@ -6,6 +6,7 @@ using Hypesoft.Application.DTOs;
 using Hypesoft.Domain.Entities;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using System.Data;
 
 namespace Hypesoft.Application.Handlers;
 
@@ -20,9 +21,9 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
         IMapper mapper,
         ILogger<CreateProductCommandHandler> logger)
     {
-        _uow = uow;
-        _mapper = mapper;
-        _logger = logger;
+        _uow = uow ?? throw new ArgumentNullException(nameof(uow));
+        _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<Result<Guid>> Handle(CreateProductCommand request, CancellationToken cancellationToken)
@@ -31,7 +32,7 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
         {
             // Validate SKU uniqueness only if SKU is provided
             if (!string.IsNullOrEmpty(request.Sku) && 
-                await _uow.Products.IsSkuUniqueAsync(request.Sku, cancellationToken) == false)
+                !await _uow.Products.IsSkuUniqueAsync(request.Sku, false, cancellationToken))
             {
                 return Result.Invalid(new ValidationError
                 {
@@ -41,14 +42,14 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
             }
 
             // Check if category exists
-            var category = await _uow.Categories.GetByIdAsync(request.CategoryId, cancellationToken);
-            if (category == null)
+            var categoryExists = await _uow.Categories.ExistsAsync(c => c.Id == request.CategoryId, cancellationToken);
+            if (!categoryExists)
             {
                 _logger.LogWarning("Category with ID {CategoryId} not found", request.CategoryId);
                 return Result.NotFound($"Category with ID {request.CategoryId} not found");
             }
 
-            // Create the product
+            // Create new product using the factory method
             var product = new Product(
                 request.Name,
                 request.Description,
@@ -64,21 +65,23 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
                 request.Width,
                 request.Length,
                 request.IsFeatured,
-                request.IsPublished,
-                request.UserId);
+                request.IsPublished);
 
-            // Save the product
+            // Add product to repository
             await _uow.Products.AddAsync(product, cancellationToken);
             await _uow.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Created product with ID {ProductId}", product.Id);
-
-            // Return product ID
             return Result.Success(product.Id);
+        }
+        catch (DBConcurrencyException ex)
+        {
+            _logger.LogWarning(ex, "Concurrency error creating product: {Message}", ex.Message);
+            return Result.Error("A concurrency error occurred while creating the product");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating product");
+            _logger.LogError(ex, "Error creating product: {Message}", ex.Message);
             return Result.Error($"An error occurred while creating the product: {ex.Message}");
         }
     }

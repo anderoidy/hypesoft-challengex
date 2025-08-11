@@ -1,36 +1,36 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>1701;1702;1591</NoWarn>
   </PropertyGroup>
-
-  <ItemGroup>
-    <!-- CORRIGIDO: Versões estáveis -->
-    <PackageReference Include="AutoMapper"  />
-    <PackageReference Include="Microsoft.EntityFrameworkCore"  />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools"  />
-    
-    <!-- CORRIGIDO: Versão disponível do MongoDB -->
-    <PackageReference Include="MongoDB.EntityFrameworkCore"  />
-    <PackageReference Include="MongoDB.Driver"  />
-    
-    <!-- CORRIGIDO: Versões compatíveis -->
-    <PackageReference Include="Microsoft.Extensions.Logging"  />
-    <PackageReference Include="Microsoft.Extensions.Configuration"  />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection"  />
-    <PackageReference Include="Ardalis.GuardClauses"  />
-    
-    <!-- CORRIGIDO: AutoMapper compatível -->
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Hypesoft.Application\Hypesoft.Application.csproj" />
     <ProjectReference Include="..\Hypesoft.Domain\Hypesoft.Domain.csproj" />
   </ItemGroup>
 
-</Project>
+  <ItemGroup>
+    <PackageReference Include="Ardalis.Result" Version="10.1.0" />
+    <PackageReference Include="Ardalis.Specification" Version="9.2.0" />
+    <PackageReference Include="Ardalis.Specification.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="Ardalis.Result.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.8" />    
+    <PackageReference Include="MongoDB.Driver" Version="3.0.0" /> 
+    <PackageReference Include="MongoDB.EntityFrameworkCore" Version="8.2.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.6.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="7.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.8" />
+  </ItemGroup>
 
+  <ItemGroup>
+    <Compile Update="Persistence\ApplicationDbContext.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Compile>
+  </ItemGroup>
+</Project>

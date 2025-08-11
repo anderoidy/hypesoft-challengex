@@ -10,10 +10,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Hypesoft.Infrastructure.Data;
-using Hypesoft.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
+using Hypesoft.Infrastructure.Persistence;
 
 namespace Hypesoft.IntegrationTests;
 
@@ -103,9 +102,46 @@ public class TestBase : IDisposable
 
     protected async Task AuthenticateAsync()
     {
-        // Implementar autenticação para testes, se necessário
-        // Por exemplo, obter um token JWT e configurar o cabeçalho de autorização
-        // TestClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("bearer", await GetJwtAsync());
+        // Ensure the test user exists
+        var userManager = _serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = _serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        var configuration = _serviceProvider.GetRequiredService<IConfiguration>();
+
+        // Create test role if it doesn't exist
+        const string testRole = "TestRole";
+        if (!await roleManager.RoleExistsAsync(testRole))
+        {
+            await roleManager.CreateAsync(new IdentityRole(testRole));
+        }
+
+        // Create test user if it doesn't exist
+        var testUser = await userManager.FindByEmailAsync("test@example.com");
+        if (testUser == null)
+        {
+            testUser = new ApplicationUser
+            {
+                UserName = "testuser",
+                Email = "test@example.com",
+                EmailConfirmed = true
+            };
+            
+            var createUserResult = await userManager.CreateAsync(testUser, "Test@123");
+            if (!createUserResult.Succeeded)
+            {
+                throw new Exception($"Failed to create test user: {string.Join(", ", createUserResult.Errors)}");
+            }
+
+            // Add user to test role
+            await userManager.AddToRoleAsync(testUser, testRole);
+        }
+
+        // Generate JWT token
+        var jwtService = _serviceProvider.GetRequiredService<IJwtService>();
+        var roles = await userManager.GetRolesAsync(testUser);
+        var token = jwtService.GenerateToken(testUser, roles);
+
+        // Set the authorization header
+        TestClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }
 
     protected async Task<HttpResponseMessage> CreateProductAsync(object createProductCommand)

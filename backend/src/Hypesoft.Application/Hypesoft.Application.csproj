@@ -1,36 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>1701;1702;1591;CS8618;CS0108</NoWarn>
   </PropertyGroup>
-
-  <ItemGroup>
-    <!-- Pacotes principais -->    <PackageReference Include="AutoMapper" />
-    <PackageReference Include="FluentResults" />
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
-    <PackageReference Include="MediatR" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <!-- Pacotes do Microsoft -->
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Hypesoft.Domain\Hypesoft.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="Ardalis.Result" />
-    <Using Include="System.Threading" />
+  <PackageReference Include="Ardalis.Result.AspNetCore" Version="10.0.0" />
+  <PackageReference Include="Ardalis.Result" Version="10.1.0" />
+  <PackageReference Include="Ardalis.Specification" Version="9.2.0" />
+  <PackageReference Include="Ardalis.Specification.EntityFrameworkCore" Version="9.0.0" />
+  <PackageReference Include="MediatR" Version="12.4.1" /> 
+  <PackageReference Include="AutoMapper" Version="13.0.1" /> 
+  <PackageReference Include="Ardalis.GuardClauses" Version="5.0.0" />    
+  <PackageReference Include="FluentResults" Version="4.0.0" />
+  <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.9.0" />
   </ItemGroup>
-
 </Project>
-

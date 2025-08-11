@@ -1,136 +1,201 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Threading;
+using System.Threading.Tasks;
 using Hypesoft.Application.Common.Interfaces;
-using Hypesoft.Domain.Common.Interfaces;
-using Hypesoft.Domain.Entities;
-using Hypesoft.Domain.Repositories;
-using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.EntityFrameworkCore; 
 using Hypesoft.Domain.Common;
-using System.Data; 
-using Hypesoft.Infrastructure.Repositories;
+using Hypesoft.Domain.Common.Interfaces;
+using Hypesoft.Domain.Repositories;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Hypesoft.Infrastructure.Persistence;
-
-public sealed class ApplicationUnitOfWork : IApplicationUnitOfWork
+namespace Hypesoft.Infrastructure.Persistence
 {
-    private readonly ApplicationDbContext _context;
-
-    private IProductRepository? _products;
-    private ICategoryRepository? _categories;
-    private ITagRepository? _tags;
-
-    private IDbContextTransaction? _currentTransaction;
-
-    public ApplicationUnitOfWork(ApplicationDbContext context,
-                               IProductRepository products,
-                               ICategoryRepository categories,
-                               ITagRepository tags)
+    /// <summary>
+    /// Represents the default implementation of the <see cref="IApplicationUnitOfWork"/> interface.
+    /// </summary>
+    public class ApplicationUnitOfWork : IApplicationUnitOfWork
     {
-        _context = context;
-        _products = products;
-        _categories = categories;
-        _tags = tags;
-    }
+        private readonly ApplicationDbContext _context;
+        private IDbContextTransaction? _currentTransaction;
+        private readonly Dictionary<Type, object> _repositories;
+        private bool _disposed;
 
-    public IProductRepository Products => _products ?? throw new InvalidOperationException("Repository not resolved");
-    public ICategoryRepository Categories => _categories ?? throw new InvalidOperationException("Repository not resolved");
-    public ITagRepository Tags => _tags ?? throw new InvalidOperationException("Repository not resolved");
-
-    public IRepository<TEntity> Repository<TEntity>() where TEntity : EntityBase 
-        => new RepositoryBase<TEntity>(_context);
-
-    public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
-        => _currentTransaction = await _context.Database.BeginTransactionAsync(cancellationToken);
-
-    public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
-    {
-        if (_currentTransaction == null) return;
-        await _currentTransaction.CommitAsync(cancellationToken);
-        await _currentTransaction.DisposeAsync();
-        _currentTransaction = null;
-    }
-
-    public async Task RollbackTransactionAsync(CancellationToken cancellationToken = default)
-    {
-        if (_currentTransaction == null) return;
-        await _currentTransaction.RollbackAsync(cancellationToken);
-        await _currentTransaction.DisposeAsync();
-        _currentTransaction = null;
-    }
-
-    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-        => await _context.SaveChangesAsync(cancellationToken);
-
-    public void RejectChanges()
-    {
-        var changedEntries = _context.ChangeTracker
-            .Entries()
-            .Where(e => e.State != EntityState.Unchanged);
-
-        foreach (var entry in changedEntries)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ApplicationUnitOfWork"/> class.
+        /// </summary>
+        /// <param name="context">The database context.</param>
+        public ApplicationUnitOfWork(ApplicationDbContext context)
         {
-            switch (entry.State)
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _repositories = new Dictionary<Type, object>();
+        }
+
+        /// <inheritdoc />
+        public IProductRepository Products => GetRepository<IProductRepository>();
+
+        /// <inheritdoc />
+        public ICategoryRepository Categories => GetRepository<ICategoryRepository>();
+
+        /// <inheritdoc />
+        public ITagRepository Tags => GetRepository<ITagRepository>();
+
+        /// <inheritdoc />
+        public IRepository<TEntity> GetRepository<TEntity>() where TEntity : BaseEntity
+        {
+            var type = typeof(TEntity);
+
+            if (!_repositories.ContainsKey(type))
             {
-                case EntityState.Added:
-                    entry.State = EntityState.Detached;
-                    break;
-                case EntityState.Modified:
-                case EntityState.Deleted:
-                    entry.Reload();
-                    break;
+                _repositories[type] = new Repository<TEntity>(_context);
+            }
+
+            return (IRepository<TEntity>)_repositories[type];
+        }
+
+        /// <inheritdoc />
+        public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        /// <inheritdoc />
+        public async Task<IDisposable> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        {
+            if (_currentTransaction != null)
+            {
+                throw new InvalidOperationException("A transaction is already in progress.");
+            }
+
+            _currentTransaction = await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+            return _currentTransaction;
+        }
+
+        /// <inheritdoc />
+        public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (_currentTransaction == null)
+                {
+                    throw new InvalidOperationException("No transaction is currently active.");
+                }
+
+                await _context.SaveChangesAsync(cancellationToken);
+                await _currentTransaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await RollbackTransactionAsync(cancellationToken);
+                throw;
+            }
+            finally
+            {
+                if (_currentTransaction != null)
+                {
+                    await _currentTransaction.DisposeAsync();
+                    _currentTransaction = null;
+                }
             }
         }
-    }
 
-    public void DetachAllEntities()
-    {
-        var changedEntries = _context.ChangeTracker
-            .Entries()
-            .Where(e => e.State != EntityState.Detached)
-            .ToList();
-
-        foreach (var entry in changedEntries)
+        /// <inheritdoc />
+        public async Task RollbackTransactionAsync(CancellationToken cancellationToken = default)
         {
-            entry.State = EntityState.Detached;
+            try
+            {
+                if (_currentTransaction != null)
+                {
+                    await _currentTransaction.RollbackAsync(cancellationToken);
+                }
+            }
+            finally
+            {
+                if (_currentTransaction != null)
+                {
+                    await _currentTransaction.DisposeAsync();
+                    _currentTransaction = null;
+                }
+            }
         }
-    }
 
-    public async Task<int> ExecuteSqlCommandAsync(string sql, params object[] parameters)
-        => await _context.Database.ExecuteSqlRawAsync(sql, parameters);
-
-    public async Task<bool> CanConnectAsync(CancellationToken cancellationToken = default)
-        => await _context.Database.CanConnectAsync(cancellationToken);
-
-    public async Task<bool> IsCategoryInUseAsync(Guid categoryId, CancellationToken cancellationToken = default)
-        => await _context.Products.AnyAsync(p => p.CategoryId == categoryId, cancellationToken);
-
-    public async Task<bool> IsTagInUseAsync(Guid tagId, CancellationToken cancellationToken = default)
-    {
-        // Verifica se a tag está sendo usada em algum produto
-        return await _context.Products
-            .AnyAsync(p => p.ProductTags.Any(pt => pt.TagId == tagId), cancellationToken);
-    }
-
-    public async Task<int> GetTotalProductCountAsync(CancellationToken cancellationToken = default)
-        => await _context.Products.CountAsync(cancellationToken);
-
-    public async Task<int> GetTotalCategoryCountAsync(CancellationToken cancellationToken = default)
-        => await _context.Categories.CountAsync(cancellationToken);
-
-    public async Task<int> GetTotalTagCountAsync(CancellationToken cancellationToken = default)
-        => await _context.Tags.CountAsync(cancellationToken);
-
-    public void Dispose()
-    {
-        _currentTransaction?.Dispose();
-        _context.Dispose();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_currentTransaction != null)
+        /// <inheritdoc />
+        public void RollbackTransaction()
         {
-            await _currentTransaction.DisposeAsync();
+            try
+            {
+                _currentTransaction?.Rollback();
+            }
+            finally
+            {
+                if (_currentTransaction != null)
+                {
+                    _currentTransaction.Dispose();
+                    _currentTransaction = null;
+                }
+            }
         }
-        await _context.DisposeAsync();
+
+        /// <summary>
+        /// Gets the repository for the specified repository interface type.
+        /// </summary>
+        /// <typeparam name="TRepository">The type of the repository interface.</typeparam>
+        /// <returns>The repository instance.</returns>
+        private TRepository GetRepository<TRepository>() where TRepository : class
+        {
+            var type = typeof(TRepository);
+
+            if (!_repositories.ContainsKey(type))
+            {
+                // This is a simplified example. In a real application, you would use dependency injection
+                // to resolve the repository implementations.
+                if (type == typeof(IProductRepository))
+                {
+                    _repositories[type] = new ProductRepository(_context);
+                }
+                else if (type == typeof(ICategoryRepository))
+                {
+                    _repositories[type] = new CategoryRepository(_context);
+                }
+                else if (type == typeof(ITagRepository))
+                {
+                    _repositories[type] = new TagRepository(_context);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Repository of type {type.Name} is not supported.");
+                }
+            }
+
+            return (TRepository)_repositories[type];
+        }
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Releases unmanaged and - optionally - managed resources.
+        /// </summary>
+        /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    _currentTransaction?.Dispose();
+                    _context.Dispose();
+                }
+
+                _disposed = true;
+            }
+        }
     }
 }

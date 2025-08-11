@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Hypesoft.Application.Common.Models;
 
 namespace Hypesoft.Application.Common.Models;
 
@@ -8,10 +9,12 @@ public class PaginatedList<T>
     public int PageNumber { get; }
     public int TotalPages { get; }
     public int TotalCount { get; }
+    public int PageSize { get; }
 
     public PaginatedList(List<T> items, int count, int pageNumber, int pageSize)
     {
         PageNumber = pageNumber;
+        PageSize = pageSize;
         TotalPages = (int)Math.Ceiling(count / (double)pageSize);
         TotalCount = count;
         Items = items;
@@ -33,5 +36,10 @@ public class PaginatedList<T>
         var count = enumerable.Length;
         var items = enumerable.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
         return new PaginatedList<T>(items, count, pageNumber, pageSize);
+    }
+
+    public static PaginatedList<T> Create(List<T> items, int totalCount, int pageNumber, int pageSize)
+    {
+        return new PaginatedList<T>(items, totalCount, pageNumber, pageSize);
     }
 }

@@ -13,6 +13,7 @@ using Hypesoft.Domain.Repositories;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Hypesoft.Application.Common.Interfaces;
 
 namespace Hypesoft.Application.UnitTests.Handlers.Queries;
 
