@@ -1,258 +1,211 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Ardalis.Specification;
-using Hypesoft.Domain.Common;
+using Hypesoft.Domain.Common.Interfaces;
 using Hypesoft.Domain.Entities;
 using Hypesoft.Domain.Repositories;
+using Hypesoft.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 
 namespace Hypesoft.Infrastructure.Repositories
 {
     /// <summary>
     /// Represents a repository for managing roles.
     /// </summary>
-    public class RoleRepository : IRoleRepository
+    public class RoleRepository : IRoleRepository, IIdentityRepository<ApplicationRole>
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IMongoCollection<ApplicationRole> _rolesCollection;
         private readonly RoleManager<ApplicationRole> _roleManager;
+        private readonly ApplicationDbContext _context;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RoleRepository"/> class.
-        /// </summary>
-        /// <param name="context">The database context.</param>
-        /// <param name="roleManager">The role manager.</param>
         public RoleRepository(
             ApplicationDbContext context,
-            RoleManager<ApplicationRole> roleManager)
+            RoleManager<ApplicationRole> roleManager
+        )
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _roleManager = roleManager ?? throw new ArgumentNullException(nameof(roleManager));
+            _rolesCollection = context.GetCollection<ApplicationRole>("Roles");
         }
 
-        #region IRepository<ApplicationRole> Implementation
+        public IUnitOfWork UnitOfWork => _context;
 
-        public async Task<ApplicationRole> AddAsync(ApplicationRole entity, CancellationToken cancellationToken = default)
+        public async Task<ApplicationRole?> GetByIdAsync(
+            Guid id,
+            CancellationToken cancellationToken = default
+        )
         {
+            return await _rolesCollection
+                .Find(r => r.Id == id)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<ApplicationRole>> GetAllAsync(
+            CancellationToken cancellationToken = default
+        )
+        {
+            return await _rolesCollection
+                .Find(FilterDefinition<ApplicationRole>.Empty)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<ApplicationRole>> GetListBySpecAsync(
+            ISpecification<ApplicationRole> spec,
+            CancellationToken cancellationToken = default
+        )
+        {
+            if (spec == null)
+                throw new ArgumentNullException(nameof(spec));
+
+            var query = _rolesCollection.AsQueryable();
+
+            if (spec.Criteria != null)
+            {
+                query = query.Where(spec.Criteria);
+            }
+
+            if (spec.OrderBy != null)
+            {
+                query = spec.OrderBy(query);
+            }
+
+            if (spec.Skip.HasValue)
+            {
+                query = query.Skip(spec.Skip.Value);
+            }
+
+            if (spec.Take.HasValue)
+            {
+                query = query.Take(spec.Take.Value);
+            }
+
+            return await query.ToListAsync(cancellationToken);
+        }
+
+        public async Task<ApplicationRole> AddAsync(
+            ApplicationRole entity,
+            CancellationToken cancellationToken = default
+        )
+        {
+            entity.SetUpdatedAt(DateTime.UtcNow);
+
             var result = await _roleManager.CreateAsync(entity);
             if (!result.Succeeded)
             {
-                throw new InvalidOperationException($"Failed to create role: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                throw new InvalidOperationException(
+                    $"Failed to create role: {string.Join(", ", result.Errors.Select(e => e.Description))}"
+                );
             }
+
             return entity;
         }
 
-        public async Task<IEnumerable<ApplicationRole>> AddRangeAsync(IEnumerable<ApplicationRole> entities, CancellationToken cancellationToken = default)
+        public async Task UpdateAsync(
+            ApplicationRole entity,
+            CancellationToken cancellationToken = default
+        )
         {
-            var roles = entities.ToList();
-            foreach (var role in roles)
+            entity.SetUpdatedAt(DateTime.UtcNow);
+            var result = await _roleManager.UpdateAsync(entity);
+
+            if (!result.Succeeded)
             {
-                await AddAsync(role, cancellationToken);
-            }
-            return roles;
-        }
-
-        public async Task<bool> AnyAsync(ISpecification<ApplicationRole> specification, CancellationToken cancellationToken = default)
-        {
-            return await ApplySpecification(specification).AnyAsync(cancellationToken);
-        }
-
-        public async Task<bool> AnyAsync(CancellationToken cancellationToken = default)
-        {
-            return await _roleManager.Roles.AnyAsync(cancellationToken);
-        }
-
-        public async Task<int> CountAsync(ISpecification<ApplicationRole> specification, CancellationToken cancellationToken = default)
-        {
-            return await ApplySpecification(specification).CountAsync(cancellationToken);
-        }
-
-        public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        {
-            return await _roleManager.Roles.CountAsync(cancellationToken);
-        }
-
-        public void Delete(ApplicationRole entity)
-        {
-            _context.Roles.Remove(entity);
-        }
-
-        public void DeleteRange(IEnumerable<ApplicationRole> entities)
-        {
-            _context.Roles.RemoveRange(entities);
-        }
-
-        public async Task<ApplicationRole?> FirstOrDefaultAsync(ISpecification<ApplicationRole> specification, CancellationToken cancellationToken = default)
-        {
-            return await ApplySpecification(specification).FirstOrDefaultAsync(cancellationToken);
-        }
-
-        public async Task<TResult?> FirstOrDefaultAsync<TResult>(ISpecification<ApplicationRole, TResult> specification, CancellationToken cancellationToken = default)
-        {
-            return await ApplySpecification(specification).FirstOrDefaultAsync(cancellationToken);
-        }
-
-        public async Task<ApplicationRole?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
-        {
-            return await _roleManager.Roles
-                .Include(r => r.UserRoles)
-                    .ThenInclude(ur => ur.User)
-                .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
-        }
-
-        public async Task<IReadOnlyList<ApplicationRole>> ListAllAsync(CancellationToken cancellationToken = default)
-        {
-            return await _roleManager.Roles
-                .Include(r => r.UserRoles)
-                    .ThenInclude(ur => ur.User)
-                .OrderBy(r => r.Name)
-                .ToListAsync(cancellationToken);
-        }
-
-        public async Task<IReadOnlyList<ApplicationRole>> ListAsync(ISpecification<ApplicationRole> specification, CancellationToken cancellationToken = default)
-        {
-            return await ApplySpecification(specification)
-                .Include(r => r.UserRoles)
-                    .ThenInclude(ur => ur.User)
-                .OrderBy(r => r.Name)
-                .ToListAsync(cancellationToken);
-        }
-
-        public async Task<IReadOnlyList<TResult>> ListAsync<TResult>(ISpecification<ApplicationRole, TResult> specification, CancellationToken cancellationToken = default)
-        {
-            return await ApplySpecification(specification)
-                .OrderBy(r => r.Name)
-                .ToListAsync(cancellationToken);
-        }
-
-        public void Update(ApplicationRole entity)
-        {
-            _context.Entry(entity).State = EntityState.Modified;
-        }
-
-        public void UpdateRange(IEnumerable<ApplicationRole> entities)
-        {
-            foreach (var entity in entities)
-            {
-                Update(entity);
+                throw new InvalidOperationException(
+                    $"Failed to update role: {string.Join(", ", result.Errors.Select(e => e.Description))}"
+                );
             }
         }
 
-        #endregion
-
-        #region IRoleRepository Implementation
-
-        public async Task<ApplicationRole?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
+        public async Task DeleteAsync(
+            ApplicationRole entity,
+            CancellationToken cancellationToken = default
+        )
         {
-            return await _roleManager.Roles
-                .Include(r => r.UserRoles)
-                    .ThenInclude(ur => ur.User)
-                .FirstOrDefaultAsync(r => r.NormalizedName == _roleManager.NormalizeKey(name), cancellationToken);
+            var result = await _roleManager.DeleteAsync(entity);
+            if (!result.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to delete role: {string.Join(", ", result.Errors.Select(e => e.Description))}"
+                );
+            }
         }
 
-        public async Task<ApplicationRole?> GetByNormalizedNameAsync(string normalizedName, CancellationToken cancellationToken = default)
+        public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            return await _roleManager.Roles
-                .Include(r => r.UserRoles)
-                    .ThenInclude(ur => ur.User)
-                .FirstOrDefaultAsync(r => r.NormalizedName == normalizedName, cancellationToken);
+            var role = await GetByIdAsync(id, cancellationToken);
+            if (role != null)
+            {
+                await DeleteAsync(role, cancellationToken);
+            }
         }
 
-        public async Task<bool> ExistsWithNameAsync(string name, CancellationToken cancellationToken = default)
+        public async Task<ApplicationRole?> GetByNameAsync(
+            string name,
+            CancellationToken cancellationToken = default
+        )
         {
-            return await _roleManager.Roles
-                .AnyAsync(r => r.NormalizedName == _roleManager.NormalizeKey(name), cancellationToken);
+            return await _rolesCollection
+                .Find(r => r.NormalizedName == name.ToUpper())
+                .FirstOrDefaultAsync(cancellationToken);
         }
 
-        public async Task<int> GetUsersInRoleCountAsync(string roleName, CancellationToken cancellationToken = default)
-        {
-            var role = await GetByNameAsync(roleName, cancellationToken);
-            if (role == null)
-                return 0;
-
-            return await _context.UserRoles
-                .CountAsync(ur => ur.RoleId == role.Id, cancellationToken);
-        }
-
-        public async Task<IReadOnlyList<ApplicationUser>> GetUsersInRoleAsync(
+        public async Task<bool> ExistsAsync(
             string roleName,
-            int pageNumber = 1,
-            int pageSize = 20,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default
+        )
+        {
+            return await _rolesCollection
+                .Find(r => r.NormalizedName == roleName.ToUpper())
+                .AnyAsync(cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<ApplicationRole>> GetRolesForUserAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var userRoles = await _context
+                .UserRoles.Find(ur => ur.UserId == userId)
+                .ToListAsync(cancellationToken);
+
+            var roleIds = userRoles.Select(ur => ur.RoleId).ToList();
+
+            if (!roleIds.Any())
+                return new List<ApplicationRole>();
+
+            return await _rolesCollection
+                .Find(r => roleIds.Contains(r.Id))
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<bool> IsInRoleAsync(
+            Guid userId,
+            string roleName,
+            CancellationToken cancellationToken = default
+        )
         {
             var role = await GetByNameAsync(roleName, cancellationToken);
             if (role == null)
-                return new List<ApplicationUser>();
+                return false;
 
-            return await _context.Users
-                .Where(u => u.UserRoles.Any(ur => ur.RoleId == role.Id))
-                .OrderBy(u => u.UserName)
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync(cancellationToken);
+            var userRole = await _context
+                .UserRoles.Find(ur => ur.UserId == userId && ur.RoleId == role.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            return userRole != null;
         }
 
-        public async Task<IList<IdentityRoleClaim<Guid>>> GetClaimsAsync(ApplicationRole role, CancellationToken cancellationToken = default)
+        public async Task<bool> RoleExistsAsync(
+            string roleName,
+            CancellationToken cancellationToken = default
+        )
         {
-            return await _context.RoleClaims
-                .Where(rc => rc.RoleId == role.Id)
-                .ToListAsync(cancellationToken);
+            return await _roleManager.RoleExistsAsync(roleName);
         }
-
-        public async Task<IdentityResult> AddClaimAsync(
-            ApplicationRole role,
-            IdentityRoleClaim<Guid> claim,
-            CancellationToken cancellationToken = default)
-        {
-            return await _roleManager.AddClaimAsync(role, claim.ToClaim());
-        }
-
-        public async Task<IdentityResult> RemoveClaimAsync(
-            ApplicationRole role,
-            IdentityRoleClaim<Guid> claim,
-            CancellationToken cancellationToken = default)
-        {
-            var claims = await _roleManager.GetClaimsAsync(role);
-            var claimToRemove = claims.FirstOrDefault(c => c.Type == claim.ClaimType && c.Value == claim.ClaimValue);
-            
-            if (claimToRemove != null)
-            {
-                return await _roleManager.RemoveClaimAsync(role, claimToRemove);
-            }
-
-            return IdentityResult.Success;
-        }
-
-        public async Task<string> GetNormalizedRoleNameAsync(ApplicationRole role, CancellationToken cancellationToken = default)
-        {
-            return await _roleManager.GetNormalizedRoleNameAsync(role);
-        }
-
-        public async Task<IdentityResult> SetNormalizedRoleNameAsync(
-            ApplicationRole role,
-            string normalizedName,
-            CancellationToken cancellationToken = default)
-        {
-            return await _roleManager.SetNormalizedRoleNameAsync(role, normalizedName);
-        }
-
-        #endregion
-
-        #region Private Methods
-
-        private IQueryable<ApplicationRole> ApplySpecification(ISpecification<ApplicationRole> specification)
-        {
-            return SpecificationEvaluator.Default.GetQuery(_roleManager.Roles.AsQueryable(), specification);
-        }
-
-        private IQueryable<TResult> ApplySpecification<TResult>(ISpecification<ApplicationRole, TResult> specification)
-        {
-            return SpecificationEvaluator.Default.GetQuery(_roleManager.Roles.AsQueryable(), specification);
-        }
-
-        #endregion
     }
 }

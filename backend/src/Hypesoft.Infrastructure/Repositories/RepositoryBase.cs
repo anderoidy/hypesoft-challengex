@@ -7,209 +7,274 @@ using System.Threading.Tasks;
 using Hypesoft.Domain.Common;
 using Hypesoft.Domain.Common.Interfaces;
 using Hypesoft.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 
 namespace Hypesoft.Infrastructure.Repositories
 {
-    public abstract class RepositoryBase<TEntity> : IRepository<TEntity> where TEntity : EntityBase
+    public abstract class RepositoryBase<T> : IRepository<T>
+        where T : BaseEntity
     {
-        protected readonly ApplicationDbContext _dbContext;
-        protected readonly DbSet<TEntity> _dbSet;
+        protected readonly IMongoCollection<T> _collection;
+        protected readonly ApplicationDbContext _context;
 
-        protected RepositoryBase(ApplicationDbContext dbContext)
+        public IUnitOfWork UnitOfWork => _context;
+
+        protected RepositoryBase(ApplicationDbContext context, string collectionName)
         {
-            _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-            _dbSet = _dbContext.Set<TEntity>();
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _collection = GetCollection<T>(collectionName);
         }
 
-        public virtual async Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        protected IMongoCollection<TEntity> GetCollection<TEntity>(string name)
+            where TEntity : class
         {
-            return await _dbSet.FindAsync(new object[] { id }, cancellationToken);
+            return _context
+                    .GetType()
+                    .GetProperties()
+                    .FirstOrDefault(p =>
+                        p.PropertyType == typeof(IMongoCollection<TEntity>) && p.Name == name
+                    )
+                    ?.GetValue(_context) as IMongoCollection<TEntity>
+                ?? throw new InvalidOperationException($"Collection {name} not found in DbContext");
         }
 
-        public virtual async Task<TEntity?> GetByIdAsync(Guid id, string includeProperties, CancellationToken cancellationToken = default)
+        public virtual IQueryable<T> GetAll() => _collection.AsQueryable();
+
+        public virtual IQueryable<T> Find(
+            Expression<Func<T, bool>> predicate,
+            CancellationToken cancellationToken = default
+        ) => _collection.AsQueryable().Where(predicate);
+
+        public virtual async Task<T?> GetByIdAsync(
+            Guid id,
+            CancellationToken cancellationToken = default
+        ) => await _collection.Find(e => e.Id == id).FirstOrDefaultAsync(cancellationToken);
+
+        public virtual async Task<T?> FirstOrDefaultAsync(
+            Expression<Func<T, bool>> predicate,
+            CancellationToken cancellationToken = default
+        ) => await _collection.Find(predicate).FirstOrDefaultAsync(cancellationToken);
+
+        public virtual async Task AddAsync(
+            T entity,
+            CancellationToken cancellationToken = default
+        ) => await _collection.InsertOneAsync(entity, cancellationToken: cancellationToken);
+
+        public virtual async Task AddRangeAsync(
+            IEnumerable<T> entities,
+            CancellationToken cancellationToken = default
+        ) => await _collection.InsertManyAsync(entities, cancellationToken: cancellationToken);
+
+        public virtual void Update(T entity) =>
+            _collection.ReplaceOne(e => e.Id == entity.Id, entity);
+
+        public virtual void UpdateRange(IEnumerable<T> entities)
         {
-            IQueryable<TEntity> query = _dbSet;
-            
-            if (!string.IsNullOrWhiteSpace(includeProperties))
-            {
-                foreach (var includeProperty in includeProperties.Split(',', StringSplitOptions.RemoveEmptyEntries))
-                {
-                    query = query.Include(includeProperty.Trim());
-                }
-            }
-            
-            return await query.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+            foreach (var entity in entities)
+                Update(entity);
         }
 
-        public virtual async Task<TEntity?> GetByIdAsync(Guid id, params Expression<Func<TEntity, object>>[] includeProperties)
+        public virtual void Remove(T entity) => _collection.DeleteOne(e => e.Id == entity.Id);
+
+        public virtual void RemoveRange(IEnumerable<T> entities)
         {
-            IQueryable<TEntity> query = _dbSet;
-            
-            if (includeProperties != null)
-            {
-                query = includeProperties.Aggregate(query, (current, include) => current.Include(include));
-            }
-            
-            return await query.FirstOrDefaultAsync(e => e.Id == id);
+            var ids = entities.Select(e => e.Id).ToList();
+            _collection.DeleteMany(e => ids.Contains(e.Id));
         }
 
-        public virtual async Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
-        {
-            return await _dbSet.AsNoTracking().ToListAsync(cancellationToken);
-        }
-
-        public virtual async Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
-        {
-            return await _dbSet.Where(predicate).AsNoTracking().ToListAsync(cancellationToken);
-        }
+        public virtual async Task<bool> AnyAsync(
+            Expression<Func<T, bool>> predicate,
+            CancellationToken cancellationToken = default
+        ) => await _collection.Find(predicate).AnyAsync(cancellationToken);
 
         public virtual async Task<int> CountAsync(CancellationToken cancellationToken = default)
         {
-            return await _dbSet.CountAsync(cancellationToken);
+            var count = await _collection.CountDocumentsAsync(
+                FilterDefinition<T>.Empty,
+                cancellationToken: cancellationToken
+            );
+            return (int)count;
         }
 
-        public virtual async Task<int> CountAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+        public virtual async Task<int> CountAsync(
+            Expression<Func<T, bool>> predicate,
+            CancellationToken cancellationToken = default
+        )
         {
-            return await _dbSet.CountAsync(predicate, cancellationToken);
+            var count = await _collection.CountDocumentsAsync(predicate, cancellationToken);
+            return (int)count;
         }
 
-        public virtual async Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+        // Implementação para ISpecification<T, T>
+        public virtual async Task<IReadOnlyList<T>> ListAsync(
+            ISpecification<T, T> specification,
+            CancellationToken cancellationToken = default
+        )
         {
-            return await _dbSet.AnyAsync(predicate, cancellationToken);
+            var query = _collection.AsQueryable();
+
+            if (specification.Criteria != null)
+                query = query.Where(specification.Criteria);
+
+            if (specification.OrderBy != null)
+                query = query.OrderBy(specification.OrderBy);
+            else if (specification.OrderByDescending != null)
+                query = query.OrderByDescending(specification.OrderByDescending);
+
+            if (specification.IsPagingEnabled)
+                query = query.Skip(specification.Skip).Take(specification.Take);
+
+            var result = await query.ToListAsync(cancellationToken);
+            return result.AsReadOnly();
         }
 
-        public virtual async Task<(IEnumerable<TEntity> Items, int TotalCount)> GetPagedAsync(
-            int pageNumber,
-            int pageSize,
-            Expression<Func<TEntity, bool>>? predicate = null,
-            Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>>? orderBy = null,
-            string? includeProperties = null,
-            CancellationToken cancellationToken = default)
+        public virtual async Task<T?> FirstOrDefaultAsync(
+            ISpecification<T, T> specification,
+            CancellationToken cancellationToken = default
+        )
         {
-            IQueryable<TEntity> query = _dbSet;
+            var query = _collection.AsQueryable();
 
-            if (predicate != null)
+            if (specification.Criteria != null)
+                query = query.Where(specification.Criteria);
+
+            return await query.FirstOrDefaultAsync(cancellationToken);
+        }
+
+        // Implementação para ISpecification<T, TResult> (com TResult)
+        public virtual async Task<IReadOnlyList<TResult>> ListAsync<TResult>(
+            ISpecification<T, TResult> specification,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var query = _collection.AsQueryable();
+
+            if (specification.Criteria != null)
+                query = query.Where(specification.Criteria);
+
+            // Assumindo que ISpecification<T, TResult> tem um Selector
+            if (specification.Selector != null)
             {
-                query = query.Where(predicate);
+                var result = await query
+                    .Select(specification.Selector)
+                    .ToListAsync(cancellationToken);
+                return result.AsReadOnly();
             }
 
-            if (!string.IsNullOrWhiteSpace(includeProperties))
+            return new List<TResult>().AsReadOnly();
+        }
+
+        public virtual async Task<TResult?> FirstOrDefaultAsync<TResult>(
+            ISpecification<T, TResult> specification,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var query = _collection.AsQueryable();
+
+            if (specification.Criteria != null)
+                query = query.Where(specification.Criteria);
+
+            // Assumindo que ISpecification<T, TResult> tem um Selector
+            if (specification.Selector != null)
+                return await query
+                    .Select(specification.Selector)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+            return default(TResult);
+        }
+
+        // Implementação dos métodos da interface IRepository
+        public virtual async Task<IReadOnlyList<T>> ListAsync(
+            ISpecification<T> spec,
+            CancellationToken cancellationToken = default
+        )
+        {
+            return await ListAsync<T>(spec, cancellationToken);
+        }
+
+        public virtual async Task<IReadOnlyList<TResult>> ListAsync<TResult>(
+            ISpecification<T, TResult> spec,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var query = _collection.AsQueryable();
+
+            if (spec.Criteria != null)
             {
-                foreach (var includeProperty in includeProperties.Split(',', StringSplitOptions.RemoveEmptyEntries))
-                {
-                    query = query.Include(includeProperty.Trim());
-                }
+                query = query.Where(spec.Criteria);
             }
 
-            var totalCount = await query.CountAsync(cancellationToken);
-
-            if (orderBy != null)
+            if (spec.OrderBy != null)
             {
-                query = orderBy(query);
+                query = spec.OrderBy(query);
             }
 
-            var items = await query
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .AsNoTracking()
-                .ToListAsync(cancellationToken);
-
-            return (items, totalCount);
-        }
-
-        public virtual async Task<TEntity> AddAsync(TEntity entity, CancellationToken cancellationToken = default)
-        {
-            await _dbSet.AddAsync(entity, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            return entity;
-        }
-
-        public virtual async Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
-        {
-            await _dbSet.AddRangeAsync(entities, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-        }
-
-        public virtual void Update(TEntity entity)
-        {
-            _dbSet.Attach(entity);
-            _dbContext.Entry(entity).State = EntityState.Modified;
-        }
-
-        public virtual void UpdateRange(IEnumerable<TEntity> entities)
-        {
-            foreach (var entity in entities)
+            if (spec.Skip.HasValue)
             {
-                Update(entity);
+                query = query.Skip(spec.Skip.Value);
             }
-        }
 
-        public virtual void Remove(TEntity entity)
-        {
-            if (_dbContext.Entry(entity).State == EntityState.Detached)
+            if (spec.Take.HasValue)
             {
-                _dbSet.Attach(entity);
+                query = query.Take(spec.Take.Value);
             }
-            _dbSet.Remove(entity);
-        }
 
-        public virtual void RemoveRange(IEnumerable<TEntity> entities)
-        {
-            foreach (var entity in entities)
+            var result = await query.ToListAsync(cancellationToken);
+
+            if (spec.Selector != null)
             {
-                Remove(entity);
+                return result.Select(spec.Selector.Compile()).ToList();
             }
+
+            return (IReadOnlyList<TResult>)result;
         }
 
-        public virtual async Task RemoveAsync(Guid id, CancellationToken cancellationToken = default)
+        public virtual async Task<T?> FirstOrDefaultAsync(
+            ISpecification<T> spec,
+            CancellationToken cancellationToken = default
+        )
         {
-            var entity = await GetByIdAsync(id, cancellationToken);
-            if (entity != null)
+            var query = _collection.AsQueryable();
+
+            if (spec.Criteria != null)
             {
-                Remove(entity);
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                query = query.Where(spec.Criteria);
             }
-        }
 
-        public virtual async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-        {
-            return await _dbContext.SaveChangesAsync(cancellationToken);
-        }
-
-        public void Detach(TEntity entity)
-        {
-            _dbContext.Entry(entity).State = EntityState.Detached;
-        }
-
-        public void DetachAll()
-        {
-            var entries = _dbContext.ChangeTracker.Entries()
-                .Where(e => e.State != EntityState.Detached)
-                .ToList();
-
-            foreach (var entry in entries)
+            if (spec.OrderBy != null)
             {
-                if (entry.Entity != null)
-                {
-                    entry.State = EntityState.Detached;
-                }
+                query = spec.OrderBy(query);
             }
+
+            return await query.FirstOrDefaultAsync(cancellationToken);
         }
 
-        public virtual async Task<IEnumerable<TEntity>> FromSqlAsync(string sql, params object[] parameters)
+        public virtual async Task<TResult?> FirstOrDefaultAsync<TResult>(
+            ISpecification<T, TResult> spec,
+            CancellationToken cancellationToken = default
+        )
         {
-            return await _dbSet.FromSqlRaw(sql, parameters).ToListAsync();
-        }
+            var query = _collection.AsQueryable();
 
-        public virtual async Task<int> ExecuteSqlCommandAsync(string sql, params object[] parameters)
-        {
-            return await _dbContext.Database.ExecuteSqlRawAsync(sql, parameters);
-        }
+            if (spec.Criteria != null)
+            {
+                query = query.Where(spec.Criteria);
+            }
 
-        public virtual IQueryable<TEntity> Query()
-        {
-            return _dbSet.AsQueryable();
+            if (spec.OrderBy != null)
+            {
+                query = spec.OrderBy(query);
+            }
+
+            var result = await query.FirstOrDefaultAsync(cancellationToken);
+
+            if (result == null || spec.Selector == null)
+            {
+                return default;
+            }
+
+            return spec.Selector.Compile()(result);
         }
     }
 }

@@ -1,6 +1,10 @@
+using System;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+using Hypesoft.Domain.Common.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Hypesoft.Domain.Common.Interfaces;
 
 namespace Hypesoft.Infrastructure.Extensions
 {
@@ -13,25 +17,31 @@ namespace Hypesoft.Infrastructure.Extensions
         /// Adds a query filter to automatically filter out soft-deleted entities.
         /// </summary>
         /// <param name="entityType">The entity type to add the filter to.</param>
-        public static void AddSoftDeleteQueryFilter(this IMutableEntityType entityType)
+        public static void ApplySoftDeleteQueryFilter(this ModelBuilder modelBuilder)
         {
-            var methodToCall = typeof(ModelBuilderExtensions)
-                .GetMethod(nameof(GetSoftDeleteFilter), 
-                    System.Reflection.BindingFlags.NonPublic | 
-                    System.Reflection.BindingFlags.Static)
-                ?.MakeGenericMethod(entityType.ClrType);
-
-            var filter = methodToCall?.Invoke(null, new object[] { });
-
-            if (filter != null)
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
-                entityType.SetQueryFilter((LambdaExpression)filter);
+                if (!typeof(ISoftDelete).IsAssignableFrom(entityType.ClrType))
+                {
+                    continue;
+                }
+
+                var method = typeof(ModelBuilderExtensions)
+                    .GetMethod(nameof(GetSoftDeleteFilter), BindingFlags.NonPublic | BindingFlags.Static)
+                    .MakeGenericMethod(entityType.ClrType);
+
+                var filter = method.Invoke(null, Array.Empty<object>());
+
+                if (filter != null)
+                {
+                    entityType.SetQueryFilter((LambdaExpression)filter);
+                }
             }
         }
 
         private static LambdaExpression GetSoftDeleteFilter<TEntity>() where TEntity : class, ISoftDelete
         {
-            System.Linq.Expressions.Expression<Func<TEntity, bool>> filter = x => !x.IsDeleted;
+            Expression<Func<TEntity, bool>> filter = x => !x.IsDeleted;
             return filter;
         }
     }

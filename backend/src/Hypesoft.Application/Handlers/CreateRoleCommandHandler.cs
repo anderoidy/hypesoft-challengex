@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Result;
@@ -38,7 +39,6 @@ namespace Hypesoft.Application.Handlers
                 var role = new ApplicationRole(request.Name)
                 {
                     Description = request.Description,
-                    CreatedAt = DateTimeOffset.UtcNow,
                     CreatedBy = request.CreatedBy ?? "System"
                 };
 
@@ -47,7 +47,7 @@ namespace Hypesoft.Application.Handlers
                 
                 if (!result.Succeeded)
                 {
-                    return Result<ApplicationRole>.Error("Falha ao criar a função: " + string.Join(", ", result.Errors));
+                    return Result<ApplicationRole>.Error("Falha ao criar a função: " + string.Join(", ", result.Errors.Select(e => e.Description)));
                 }
 
                 return Result<ApplicationRole>.Success(role);

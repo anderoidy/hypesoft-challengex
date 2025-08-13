@@ -1,420 +1,343 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Ardalis.Specification;
 using Hypesoft.Domain.Common;
 using Hypesoft.Domain.Entities;
 using Hypesoft.Domain.Repositories;
-using Microsoft.EntityFrameworkCore;
+using Hypesoft.Infrastructure.Persistence;
+using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 
 namespace Hypesoft.Infrastructure.Repositories
 {
-    /// <summary>
-    /// Represents a repository for managing products.
-    /// </summary>
-    public class ProductRepository : IProductRepository
+    public class ProductRepository : RepositoryBase<Product>, IProductRepository
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IMongoCollection<Category> _categoryCollection;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ProductRepository"/> class.
-        /// </summary>
-        /// <param name="context">The database context.</param>
         public ProductRepository(ApplicationDbContext context)
+            : base(context, nameof(ApplicationDbContext.Products))
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _categoryCollection = context.Database.GetCollection<Category>("Categories");
         }
 
-        #region IRepository<Product> Implementation
-
-        public async Task<Product> AddAsync(Product entity, CancellationToken cancellationToken = default)
+        public async Task<Product?> GetBySlugAsync(
+            string slug,
+            CancellationToken cancellationToken = default
+        )
         {
-            entity.CreatedAt = DateTime.UtcNow;
-            entity.UpdatedAt = DateTime.UtcNow;
-            
-            // Generate slug if not provided
-            if (string.IsNullOrEmpty(entity.Slug))
+            return await _collection
+                .Find(p => p.Slug == slug)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public async Task<Product?> GetByIdWithDetailsAsync(
+            Guid id,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var product = await _collection
+                .Find(p => p.Id == id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (product != null)
             {
-                entity.Slug = GenerateSlug(entity.Name);
+                // Carrega a categoria relacionada
+                var category = await _categoryCollection
+                    .Find(c => c.Id == product.CategoryId)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                product.Category = category;
             }
 
-            await _context.Products.AddAsync(entity, cancellationToken);
-            return entity;
+            return product;
         }
 
-        public async Task<IEnumerable<Product>> AddRangeAsync(IEnumerable<Product> entities, CancellationToken cancellationToken = default)
+        public async Task<Product?> GetBySkuAsync(
+            string sku,
+            CancellationToken cancellationToken = default
+        )
         {
-            var products = entities.ToList();
-            var now = DateTime.UtcNow;
-            
-            foreach (var product in products)
-            {
-                product.CreatedAt = now;
-                product.UpdatedAt = now;
-                
-                if (string.IsNullOrEmpty(product.Slug))
-                {
-                    product.Slug = GenerateSlug(product.Name);
-                }
-            }
-
-            await _context.Products.AddRangeAsync(products, cancellationToken);
-            return products;
-        }
-
-        public async Task<bool> AnyAsync(ISpecification<Product> specification, CancellationToken cancellationToken = default)
-        {
-            return await ApplySpecification(specification).AnyAsync(cancellationToken);
-        }
-
-        public async Task<bool> AnyAsync(CancellationToken cancellationToken = default)
-        {
-            return await _context.Products.AnyAsync(cancellationToken);
-        }
-
-        public async Task<int> CountAsync(ISpecification<Product> specification, CancellationToken cancellationToken = default)
-        {
-            return await ApplySpecification(specification).CountAsync(cancellationToken);
-        }
-
-        public async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        {
-            return await _context.Products.CountAsync(cancellationToken);
-        }
-
-        public void Delete(Product entity)
-        {
-            _context.Products.Remove(entity);
-        }
-
-        public void DeleteRange(IEnumerable<Product> entities)
-        {
-            _context.Products.RemoveRange(entities);
-        }
-
-        public async Task<Product?> FirstOrDefaultAsync(ISpecification<Product> specification, CancellationToken cancellationToken = default)
-        {
-            return await ApplySpecification(specification).FirstOrDefaultAsync(cancellationToken);
-        }
-
-        public async Task<TResult?> FirstOrDefaultAsync<TResult>(ISpecification<Product, TResult> specification, CancellationToken cancellationToken = default)
-        {
-            return await ApplySpecification(specification).FirstOrDefaultAsync(cancellationToken);
-        }
-
-        public async Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
-        {
-            return await _context.Products
-                .Include(p => p.Category)
-                .Include(p => p.ProductTags)
-                    .ThenInclude(pt => pt.Tag)
-                .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
-        }
-
-        public async Task<IReadOnlyList<Product>> ListAllAsync(CancellationToken cancellationToken = default)
-        {
-            return await _context.Products
-                .Include(p => p.Category)
-                .Include(p => p.ProductTags)
-                    .ThenInclude(pt => pt.Tag)
-                .OrderBy(p => p.Name)
-                .ToListAsync(cancellationToken);
-        }
-
-        public async Task<IReadOnlyList<Product>> ListAsync(ISpecification<Product> specification, CancellationToken cancellationToken = default)
-        {
-            return await ApplySpecification(specification)
-                .Include(p => p.Category)
-                .Include(p => p.ProductTags)
-                    .ThenInclude(pt => pt.Tag)
-                .OrderBy(p => p.Name)
-                .ToListAsync(cancellationToken);
-        }
-
-        public async Task<IReadOnlyList<TResult>> ListAsync<TResult>(ISpecification<Product, TResult> specification, CancellationToken cancellationToken = default)
-        {
-            return await ApplySpecification(specification)
-                .OrderBy(p => p.Name)
-                .ToListAsync(cancellationToken);
-        }
-
-        public void Update(Product entity)
-        {
-            entity.UpdatedAt = DateTime.UtcNow;
-            _context.Entry(entity).State = EntityState.Modified;
-        }
-
-        public void UpdateRange(IEnumerable<Product> entities)
-        {
-            var now = DateTime.UtcNow;
-            foreach (var entity in entities)
-            {
-                entity.UpdatedAt = now;
-                _context.Entry(entity).State = EntityState.Modified;
-            }
-        }
-
-        #endregion
-
-        #region IProductRepository Implementation
-
-        public async Task<Product?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default)
-        {
-            return await _context.Products
-                .Include(p => p.Category)
-                .Include(p => p.ProductTags)
-                    .ThenInclude(pt => pt.Tag)
-                .FirstOrDefaultAsync(p => p.Slug == slug, cancellationToken);
-        }
-
-        public async Task<Product?> GetByIdWithDetailsAsync(Guid id, CancellationToken cancellationToken = default)
-        {
-            return await _context.Products
-                .Include(p => p.Category)
-                .Include(p => p.ProductTags)
-                    .ThenInclude(pt => pt.Tag)
-                .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
-        }
-
-        public async Task<Product?> GetBySkuAsync(string sku, CancellationToken cancellationToken = default)
-        {
-            return await _context.Products
-                .Include(p => p.Category)
-                .Include(p => p.ProductTags)
-                    .ThenInclude(pt => pt.Tag)
-                .FirstOrDefaultAsync(p => p.Sku == sku, cancellationToken);
+            return await _collection.Find(p => p.Sku == sku).FirstOrDefaultAsync(cancellationToken);
         }
 
         public async Task<PaginatedList<Product>> GetPaginatedProductsWithDetailsAsync(
             int pageNumber = 1,
             int pageSize = 20,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default
+        )
         {
-            var query = _context.Products
-                .Include(p => p.Category)
-                .Include(p => p.ProductTags)
-                    .ThenInclude(pt => pt.Tag)
-                .OrderBy(p => p.Name);
-
-            var totalCount = await query.CountAsync(cancellationToken);
-            var items = await query
+            var count = await _collection.CountDocumentsAsync(
+                _ => true,
+                cancellationToken: cancellationToken
+            );
+            var items = await _collection
+                .Find(_ => true)
                 .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
+                .Limit(pageSize)
                 .ToListAsync(cancellationToken);
 
-            return new PaginatedList<Product>(items, totalCount, pageNumber, pageSize);
+            // Carrega as categorias para os produtos
+            var categoryIds = items.Select(p => p.CategoryId).Distinct().ToList();
+            var categories = await _categoryCollection
+                .Find(c => categoryIds.Contains(c.Id))
+                .ToListAsync(cancellationToken);
+
+            var categoriesDict = categories.ToDictionary(c => c.Id, c => c);
+
+            foreach (var product in items)
+            {
+                if (categoriesDict.TryGetValue(product.CategoryId, out var category))
+                {
+                    product.Category = category;
+                }
+            }
+
+            return new PaginatedList<Product>(items, (int)count, pageNumber, pageSize);
         }
 
         public async Task<PaginatedList<Product>> GetProductsByCategoryIdAsync(
             Guid categoryId,
             int pageNumber = 1,
             int pageSize = 20,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default
+        )
         {
-            var query = _context.Products
-                .Where(p => p.CategoryId == categoryId)
-                .Include(p => p.Category)
-                .Include(p => p.ProductTags)
-                    .ThenInclude(pt => pt.Tag)
-                .OrderBy(p => p.Name);
+            var filter = Builders<Product>.Filter.Eq(p => p.CategoryId, categoryId);
+            var count = await _collection.CountDocumentsAsync(
+                filter,
+                cancellationToken: cancellationToken
+            );
 
-            var totalCount = await query.CountAsync(cancellationToken);
-            var items = await query
+            var items = await _collection
+                .Find(filter)
                 .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
+                .Limit(pageSize)
                 .ToListAsync(cancellationToken);
 
-            return new PaginatedList<Product>(items, totalCount, pageNumber, pageSize);
-        }
-
-        public async Task<PaginatedList<Product>> GetProductsByTagIdAsync(
-            Guid tagId,
-            int pageNumber = 1,
-            int pageSize = 20,
-            CancellationToken cancellationToken = default)
-        {
-            var query = _context.Products
-                .Where(p => p.ProductTags.Any(pt => pt.TagId == tagId))
-                .Include(p => p.Category)
-                .Include(p => p.ProductTags)
-                    .ThenInclude(pt => pt.Tag)
-                .OrderBy(p => p.Name);
-
-            var totalCount = await query.CountAsync(cancellationToken);
-            var items = await query
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync(cancellationToken);
-
-            return new PaginatedList<Product>(items, totalCount, pageNumber, pageSize);
+            return new PaginatedList<Product>(items, (int)count, pageNumber, pageSize);
         }
 
         public async Task<IReadOnlyList<Product>> GetFeaturedProductsAsync(
             int count = 5,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default
+        )
         {
-            return await _context.Products
-                .Where(p => p.IsFeatured)
-                .Include(p => p.Category)
-                .OrderByDescending(p => p.CreatedAt)
-                .Take(count)
+            return await _collection
+                .Find(p => p.IsFeatured)
+                .SortByDescending(p => p.CreatedAt)
+                .Limit(count)
                 .ToListAsync(cancellationToken);
         }
 
         public async Task<IReadOnlyList<Product>> GetRelatedProductsAsync(
             Guid productId,
             int count = 5,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default
+        )
         {
-            // Get the product to find related products for
-            var product = await _context.Products
-                .Include(p => p.Category)
-                .Include(p => p.ProductTags)
-                .FirstOrDefaultAsync(p => p.Id == productId, cancellationToken);
-
+            // Primeiro, obtém o produto atual para encontrar a categoria
+            var product = await GetByIdAsync(productId, cancellationToken);
             if (product == null)
                 return new List<Product>();
 
-            // Get products in the same category, excluding the current product
-            var relatedProducts = await _context.Products
-                .Where(p => p.CategoryId == product.CategoryId && p.Id != productId)
-                .Include(p => p.Category)
-                .OrderByDescending(p => p.CreatedAt)
-                .Take(count)
+            // Busca produtos da mesma categoria, excluindo o produto atual
+            return await _collection
+                .Find(p => p.CategoryId == product.CategoryId && p.Id != productId)
+                .Limit(count)
                 .ToListAsync(cancellationToken);
-
-            // If we don't have enough related products, get some from other categories
-            if (relatedProducts.Count < count)
-            {
-                var additionalProducts = await _context.Products
-                    .Where(p => p.CategoryId != product.CategoryId && p.Id != productId)
-                    .Include(p => p.Category)
-                    .OrderByDescending(p => p.CreatedAt)
-                    .Take(count - relatedProducts.Count)
-                    .ToListAsync(cancellationToken);
-
-                relatedProducts.AddRange(additionalProducts);
-            }
-
-            return relatedProducts;
         }
 
         public async Task<PaginatedList<Product>> SearchProductsAsync(
             string searchTerm,
             int pageNumber = 1,
             int pageSize = 20,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default
+        )
         {
-            var searchTermLower = searchTerm.ToLower();
-            
-            var query = _context.Products
-                .Where(p => 
-                    p.Name.ToLower().Contains(searchTermLower) ||
-                    p.Description.ToLower().Contains(searchTermLower) ||
-                    p.Sku.ToLower().Contains(searchTermLower))
-                .Include(p => p.Category)
-                .Include(p => p.ProductTags)
-                    .ThenInclude(pt => pt.Tag)
-                .OrderBy(p => p.Name);
+            var filter = Builders<Product>.Filter.Or(
+                Builders<Product>.Filter.Regex(
+                    p => p.Name,
+                    new MongoDB.Bson.BsonRegularExpression(searchTerm, "i")
+                ),
+                Builders<Product>.Filter.Regex(
+                    p => p.Description,
+                    new MongoDB.Bson.BsonRegularExpression(searchTerm, "i")
+                )
+            );
 
-            var totalCount = await query.CountAsync(cancellationToken);
-            var items = await query
+            var count = await _collection.CountDocumentsAsync(
+                filter,
+                cancellationToken: cancellationToken
+            );
+            var items = await _collection
+                .Find(filter)
                 .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
+                .Limit(pageSize)
                 .ToListAsync(cancellationToken);
 
-            return new PaginatedList<Product>(items, totalCount, pageNumber, pageSize);
+            return new PaginatedList<Product>(items, (int)count, pageNumber, pageSize);
         }
 
         public async Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default)
         {
-            return await _context.Products.CountAsync(cancellationToken);
+            return (int)
+                await _collection.CountDocumentsAsync(
+                    _ => true,
+                    cancellationToken: cancellationToken
+                );
         }
 
-        public async Task<bool> ExistsWithSkuAsync(string sku, Guid? excludeId = null, CancellationToken cancellationToken = default)
+        public async Task<bool> ExistsWithSkuAsync(
+            string sku,
+            Guid? excludeId = null,
+            CancellationToken cancellationToken = default
+        )
         {
-            var query = _context.Products.Where(p => p.Sku == sku);
-            
-            if (excludeId.HasValue)
-            {
-                query = query.Where(p => p.Id != excludeId.Value);
-            }
-            
-            return await query.AnyAsync(cancellationToken);
+            var filter = excludeId.HasValue
+                ? Builders<Product>.Filter.And(
+                    Builders<Product>.Filter.Eq(p => p.Sku, sku),
+                    Builders<Product>.Filter.Ne(p => p.Id, excludeId.Value)
+                )
+                : Builders<Product>.Filter.Eq(p => p.Sku, sku);
+
+            return await _collection.Find(filter).AnyAsync(cancellationToken);
         }
 
-        public async Task<bool> ExistsWithSlugAsync(string slug, Guid? excludeId = null, CancellationToken cancellationToken = default)
+        public async Task<bool> ExistsWithSlugAsync(
+            string slug,
+            Guid? excludeId = null,
+            CancellationToken cancellationToken = default
+        )
         {
-            var query = _context.Products.Where(p => p.Slug == slug);
-            
-            if (excludeId.HasValue)
-            {
-                query = query.Where(p => p.Id != excludeId.Value);
-            }
-            
-            return await query.AnyAsync(cancellationToken);
+            var filter = excludeId.HasValue
+                ? Builders<Product>.Filter.And(
+                    Builders<Product>.Filter.Eq(p => p.Slug, slug),
+                    Builders<Product>.Filter.Ne(p => p.Id, excludeId.Value)
+                )
+                : Builders<Product>.Filter.Eq(p => p.Slug, slug);
+
+            return await _collection.Find(filter).AnyAsync(cancellationToken);
         }
 
-        public async Task<IReadOnlyList<Guid>> GetOutOfStockProductIdsAsync(CancellationToken cancellationToken = default)
+        public async Task<IReadOnlyList<Guid>> GetOutOfStockProductIdsAsync(
+            CancellationToken cancellationToken = default
+        )
         {
-            return await _context.Products
-                .Where(p => p.StockQuantity <= 0)
-                .Select(p => p.Id)
+            var filter = Builders<Product>.Filter.Lte(p => p.StockQuantity, 0);
+            var projection = Builders<Product>.Projection.Include(p => p.Id);
+
+            var cursor = await _collection.FindAsync(
+                filter,
+                new FindOptions<Product, Product> { Projection = projection },
+                cancellationToken
+            );
+
+            var products = await cursor.ToListAsync(cancellationToken);
+            return products.Select(p => p.Id).ToList();
+        }
+
+        public async Task<bool> UpdateStockQuantityAsync(
+            Guid productId,
+            int quantityChange,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var filter = Builders<Product>.Filter.Eq(p => p.Id, productId);
+            var update = Builders<Product>
+                .Update.Inc(p => p.StockQuantity, quantityChange)
+                .Set(p => p.UpdatedAt, DateTime.UtcNow);
+
+            var result = await _collection.UpdateOneAsync(
+                filter,
+                update,
+                cancellationToken: cancellationToken
+            );
+            return result.IsAcknowledged && result.ModifiedCount > 0;
+        }
+
+        public async Task<bool> IsSkuUniqueAsync(
+            string sku,
+            Guid? excludeId = null,
+            CancellationToken cancellationToken = default
+        )
+        {
+            return !await ExistsWithSkuAsync(sku, excludeId, cancellationToken);
+        }
+
+        public async Task<(IReadOnlyList<Product> Items, int TotalItems)> GetPagedAsync(
+            Expression<Func<Product, bool>>? predicate = null,
+            int pageNumber = 1,
+            int pageSize = 20,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var filter =
+                predicate != null
+                    ? Builders<Product>.Filter.Where(predicate)
+                    : Builders<Product>.Filter.Empty;
+
+            var count = await _collection.CountDocumentsAsync(
+                filter,
+                cancellationToken: cancellationToken
+            );
+            var items = await _collection
+                .Find(filter)
+                .Skip((pageNumber - 1) * pageSize)
+                .Limit(pageSize)
                 .ToListAsync(cancellationToken);
+
+            return (items, (int)count);
         }
 
-        public async Task<bool> UpdateStockQuantityAsync(Guid productId, int quantityChange, CancellationToken cancellationToken = default)
+        // CORREÇÃO: Implementação direta que retorna Task<Product> para IProductRepository
+        public override async Task<Product> AddAsync(
+            Product entity,
+            CancellationToken cancellationToken = default
+        )
         {
-            var product = await _context.Products.FindAsync(new object[] { productId }, cancellationToken);
-            
-            if (product == null)
-                return false;
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
 
-            // Ensure we don't go below zero
-            var newQuantity = product.StockQuantity + quantityChange;
-            product.StockQuantity = Math.Max(0, newQuantity);
-            product.UpdatedAt = DateTime.UtcNow;
-            
-            _context.Entry(product).State = EntityState.Modified;
-            return true;
+            entity.CreatedAt = DateTime.UtcNow;
+            entity.SetUpdatedAt(DateTime.UtcNow);
+
+            await _collection.InsertOneAsync(entity, cancellationToken: cancellationToken);
+            return entity; // ← Retorna o produto adicionado
         }
 
-        #endregion
-
-        #region Private Methods
-
-        private IQueryable<Product> ApplySpecification(ISpecification<Product> specification)
+        // CORREÇÃO: Implementação direta do Delete para IProductRepository
+        public void Delete(Product entity)
         {
-            return SpecificationEvaluator.Default.GetQuery(_context.Products.AsQueryable(), specification);
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+            _collection.DeleteOne(p => p.Id == entity.Id);
         }
 
-        private IQueryable<TResult> ApplySpecification<TResult>(ISpecification<Product, TResult> specification)
+        // CORREÇÃO: CountAsync com nullability correta
+        public override async Task<int> CountAsync(
+            Expression<Func<Product, bool>>? predicate = null,
+            CancellationToken cancellationToken = default
+        )
         {
-            return SpecificationEvaluator.Default.GetQuery(_context.Products.AsQueryable(), specification);
+            var filter =
+                predicate != null
+                    ? Builders<Product>.Filter.Where(predicate)
+                    : Builders<Product>.Filter.Empty;
+
+            return (int)
+                await _collection.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
         }
 
-        private string GenerateSlug(string name)
+        // CORREÇÃO: ExistsAsync para IProductRepository
+        public async Task<bool> ExistsAsync(
+            Expression<Func<Product, bool>> predicate,
+            CancellationToken cancellationToken = default
+        )
         {
-            if (string.IsNullOrEmpty(name))
-                return string.Empty;
-
-            // Convert to lowercase and replace spaces with hyphens
-            var slug = name.ToLowerInvariant()
-                .Replace(" ", "-")
-                .Replace("&", "and");
-
-            // Remove invalid characters
-            slug = System.Text.RegularExpressions.Regex.Replace(slug, "[^a-z0-9-]", "");
-
-            // Remove multiple consecutive hyphens
-            slug = System.Text.RegularExpressions.Regex.Replace(slug, "-+", "-");
-
-            // Trim hyphens from the beginning and end
-            return slug.Trim('-');
+            return await _collection.Find(predicate).AnyAsync(cancellationToken);
         }
-
-        #endregion
     }
 }

@@ -15,13 +15,16 @@ namespace Hypesoft.Application.Handlers
     {
         private readonly IRoleRepository _roleRepository;
         private readonly RoleManager<ApplicationRole> _roleManager;
+        private readonly UserManager<ApplicationUser> _userManager; // Adicionado
 
         public DeleteRoleCommandHandler(
             IRoleRepository roleRepository,
-            RoleManager<ApplicationRole> roleManager)
+            RoleManager<ApplicationRole> roleManager,
+            UserManager<ApplicationUser> userManager) // Adicionado
         {
             _roleRepository = roleRepository ?? throw new ArgumentNullException(nameof(roleRepository));
             _roleManager = roleManager ?? throw new ArgumentNullException(nameof(roleManager));
+            _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager)); // Adicionado
         }
 
         public async Task<Result> Handle(DeleteRoleCommand request, CancellationToken cancellationToken)
@@ -36,11 +39,9 @@ namespace Hypesoft.Application.Handlers
                 }
 
                 // Verifica se existem usuários associados a esta função
-                var usersInRole = await _roleManager.Users
-                    .Where(u => u.Roles.Any(r => r.RoleId == request.Id))
-                    .CountAsync(cancellationToken);
-
-                if (usersInRole > 0)
+                var usersInRole = await _userManager.GetUsersInRoleAsync(existingRole.Name!);
+                
+                if (usersInRole.Count > 0)
                 {
                     return Result.Error("Não é possível excluir a função pois existem usuários associados a ela.");
                 }
@@ -50,7 +51,7 @@ namespace Hypesoft.Application.Handlers
                 
                 if (!result.Succeeded)
                 {
-                    return Result.Error("Falha ao excluir a função: " + string.Join(", ", result.Errors));
+                    return Result.Error("Falha ao excluir a função: " + string.Join(", ", result.Errors.Select(e => e.Description)));
                 }
 
                 return Result.Success();

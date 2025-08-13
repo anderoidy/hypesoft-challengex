@@ -1,14 +1,5 @@
-// Before
-namespace Hypesoft.Application.DTOs
-{
-    public class ProductDto
-    {
-        public Guid Id { get; set; }
-        public string Name { get; set; } = default!;
-        // ... other properties
-    }
-}
-// After
+namespace Hypesoft.Application.DTOs;
+
 public record ProductDto(
     Guid Id,
     string Name,
@@ -19,7 +10,6 @@ public record ProductDto(
     int StockQuantity = 0,
     string? Sku = null,
     string? Barcode = null,
-    ProductDimensionsDto? Dimensions = null,
     bool IsFeatured = false,
     bool IsPublished = false,
     DateTime? PublishedAt = null,
@@ -29,9 +19,3 @@ public record ProductDto(
     public bool HasDiscount => DiscountPrice.HasValue && DiscountPrice < Price;
     public decimal CurrentPrice => DiscountPrice ?? Price;
 }
-
-public record ProductDimensionsDto(
-    float? Weight = null,
-    float? Height = null,
-    float? Width = null,
-    float? Length = null);

@@ -9,11 +9,12 @@ public class ProductProfile : Profile
 {
     public ProductProfile()
     {
+        // Mapeamento de Product para ProductDto
         CreateMap<Product, ProductDto>()
             .ForMember(dest => dest.CategoryName, opt => 
-                opt.MapFrom((src, dest, destMember, context) => 
-                    context.Items.ContainsKey("CategoryName") ? context.Items["CategoryName"] as string : null));
+                opt.MapFrom(src => src.Category != null ? src.Category.Name : null));
                     
+        // Mapeamento de comandos para a entidade Product
         CreateMap<CreateProductCommand, Product>();
         CreateMap<UpdateProductCommand, Product>();
     }

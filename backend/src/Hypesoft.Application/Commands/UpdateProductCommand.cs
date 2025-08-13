@@ -39,8 +39,6 @@ public sealed record UpdateProductCommand : IRequest<Result<ProductDto>>
     
     public bool? IsFeatured { get; init; }
     
-    public IReadOnlyList<Guid>? TagIds { get; init; }
-    
     public string? UserId { get; init; }
     
     public UpdateProductCommand(
@@ -54,7 +52,6 @@ public sealed record UpdateProductCommand : IRequest<Result<ProductDto>>
         int stockQuantity = 0,
         decimal? discountPrice = null,
         bool? isFeatured = null,
-        IReadOnlyList<Guid>? tagIds = null,
         string? userId = null)
     {
         Id = id;
@@ -67,7 +64,6 @@ public sealed record UpdateProductCommand : IRequest<Result<ProductDto>>
         StockQuantity = stockQuantity;
         DiscountPrice = discountPrice;
         IsFeatured = isFeatured;
-        TagIds = tagIds;
         UserId = userId;
     }
 }

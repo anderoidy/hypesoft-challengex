@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
+using Hypesoft.Domain.Common.Interfaces;
 
 namespace Hypesoft.Domain.Common
 {
     /// <summary>
     /// Base class for all domain entities.
     /// </summary>
-    public abstract class BaseEntity
+    public abstract class BaseEntity : IAuditableEntity
     {
         /// <summary>
         /// Gets or sets the unique identifier for this entity.
@@ -56,13 +57,12 @@ namespace Hypesoft.Domain.Common
         /// <summary>
         /// Gets or sets the domain events associated with this entity.
         /// </summary>
-        private List<IDomainEvent> _domainEvents;
+        private List<IDomainEvent>? _domainEvents;
 
         /// <summary>
         /// Gets the domain events associated with this entity.
         /// </summary>
-        public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents?.AsReadOnly();
-
+        public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents?.AsReadOnly() ?? new List<IDomainEvent>().AsReadOnly();
         /// <summary>
         /// Adds a domain event to this entity.
         /// </summary>

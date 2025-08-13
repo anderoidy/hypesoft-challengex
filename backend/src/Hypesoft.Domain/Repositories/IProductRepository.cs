@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
 using Hypesoft.Domain.Common;
+using Hypesoft.Domain.Common.Interfaces;
 using Hypesoft.Domain.Entities;
 
 namespace Hypesoft.Domain.Repositories
@@ -22,11 +24,11 @@ namespace Hypesoft.Domain.Repositories
         Task<Product?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Gets a product with its category and tags by ID asynchronously.
+        /// Gets a product with its category by ID asynchronously.
         /// </summary>
         /// <param name="id">The ID of the product.</param>
         /// <param name="cancellationToken">A <see cref="CancellationToken"/> to observe while waiting for the task to complete.</param>
-        /// <returns>A task that represents the asynchronous operation. The task result contains the product with its category and tags, or null if not found.</returns>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the product with its category, or null if not found.</returns>
         Task<Product?> GetByIdWithDetailsAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -38,12 +40,12 @@ namespace Hypesoft.Domain.Repositories
         Task<Product?> GetBySkuAsync(string sku, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Gets a paginated list of products with their categories and tags asynchronously.
+        /// Gets a paginated list of products with their categories asynchronously.
         /// </summary>
         /// <param name="pageNumber">The page number (1-based).</param>
         /// <param name="pageSize">The number of items per page.</param>
         /// <param name="cancellationToken">A <see cref="CancellationToken"/> to observe while waiting for the task to complete.</param>
-        /// <returns>A task that represents the asynchronous operation. The task result contains a paginated list of products with their categories and tags.</returns>
+        /// <returns>A task that represents the asynchronous operation. The task result contains a paginated list of products with their categories.</returns>
         Task<PaginatedList<Product>> GetPaginatedProductsWithDetailsAsync(
             int pageNumber = 1,
             int pageSize = 20,
@@ -59,20 +61,6 @@ namespace Hypesoft.Domain.Repositories
         /// <returns>A task that represents the asynchronous operation. The task result contains a paginated list of products in the specified category.</returns>
         Task<PaginatedList<Product>> GetProductsByCategoryIdAsync(
             Guid categoryId,
-            int pageNumber = 1,
-            int pageSize = 20,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// Gets a paginated list of products by tag ID asynchronously.
-        /// </summary>
-        /// <param name="tagId">The ID of the tag.</param>
-        /// <param name="pageNumber">The page number (1-based).</param>
-        /// <param name="pageSize">The number of items per page.</param>
-        /// <param name="cancellationToken">A <see cref="CancellationToken"/> to observe while waiting for the task to complete.</param>
-        /// <returns>A task that represents the asynchronous operation. The task result contains a paginated list of products with the specified tag.</returns>
-        Task<PaginatedList<Product>> GetProductsByTagIdAsync(
-            Guid tagId,
             int pageNumber = 1,
             int pageSize = 20,
             CancellationToken cancellationToken = default);
@@ -153,5 +141,64 @@ namespace Hypesoft.Domain.Repositories
         /// <param name="cancellationToken">A <see cref="CancellationToken"/> to observe while waiting for the task to complete.</param>
         /// <returns>A task that represents the asynchronous operation. The task result is true if the update was successful; otherwise, false.</returns>
         Task<bool> UpdateStockQuantityAsync(Guid productId, int quantityChange, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Checks if a product with the specified SKU is unique asynchronously.
+        /// </summary>
+        /// <param name="sku">The SKU to check.</param>
+        /// <param name="excludeId">Optional. The ID of a product to exclude from the check (useful for updates).</param>
+        /// <param name="cancellationToken">A <see cref="CancellationToken"/> to observe while waiting for the task to complete.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result is true if the SKU is unique; otherwise, false.</returns>
+        Task<bool> IsSkuUniqueAsync(string sku, Guid? excludeId = null, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets a paged list of products asynchronously.
+        /// </summary>
+        /// <param name="predicate">Optional. A predicate to filter products.</param>
+        /// <param name="pageNumber">The page number (1-based).</param>
+        /// <param name="pageSize">The number of items per page.</param>
+        /// <param name="cancellationToken">A <see cref="CancellationToken"/> to observe while waiting for the task to complete.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains a tuple with the list of products and the total count of products.</returns>
+        Task<(IReadOnlyList<Product> Items, int TotalItems)> GetPagedAsync(
+            Expression<Func<Product, bool>>? predicate = null,
+            int pageNumber = 1,
+            int pageSize = 20,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Adds a product asynchronously.
+        /// </summary>
+        /// <param name="entity">The product to add.</param>
+        /// <param name="cancellationToken">A <see cref="CancellationToken"/> to observe while waiting for the task to complete.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the added product.</returns>
+        Task<Product> AddAsync(Product entity, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Updates a product.
+        /// </summary>
+        /// <param name="entity">The product to update.</param>
+        void Update(Product entity);
+
+        /// <summary>
+        /// Deletes a product.
+        /// </summary>
+        /// <param name="entity">The product to delete.</param>
+        void Delete(Product entity);
+
+        /// <summary>
+        /// Gets the count of products that match the specified predicate asynchronously.
+        /// </summary>
+        /// <param name="predicate">Optional. A predicate to filter products.</param>
+        /// <param name="cancellationToken">A <see cref="CancellationToken"/> to observe while waiting for the task to complete.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the count of products.</returns>
+        Task<int> CountAsync(Expression<Func<Product, bool>>? predicate = null, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Checks if a product that matches the specified predicate exists asynchronously.
+        /// </summary>
+        /// <param name="predicate">A predicate to filter products.</param>
+        /// <param name="cancellationToken">A <see cref="CancellationToken"/> to observe while waiting for the task to complete.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result is true if a product exists; otherwise, false.</returns>
+        Task<bool> ExistsAsync(Expression<Func<Product, bool>> predicate, CancellationToken cancellationToken = default);
     }
 }

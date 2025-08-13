@@ -49,10 +49,9 @@ public class GetAllProductsQueryHandler : IRequestHandler<GetAllProductsQuery, R
 
             // Get paginated results
             var (items, totalCount) = await _uow.Products.GetPagedAsync(
+                predicate: predicate,
                 pageNumber: request.PageNumber,
                 pageSize: request.PageSize,
-                predicate: predicate,
-                includeProperties: "Category,ProductTags.Tag",
                 cancellationToken: cancellationToken);
 
             // Map to DTOs

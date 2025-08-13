@@ -11,22 +11,18 @@ namespace Hypesoft.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services, 
+        IConfiguration configuration)
     {
-        // DbContext (MongoDB EF Core)
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        var databaseName = configuration["MongoDB:DatabaseName"];
+        
         services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseMongoDB(
-                configuration["Mongo:ConnectionString"] ?? throw new ArgumentNullException("Mongo:ConnectionString not configured"),
-                configuration["Mongo:Database"] ?? throw new ArgumentNullException("Mongo:Database not configured")));
-
-        // Repositories
-        services.AddScoped<IProductRepository, ProductRepository>();
-        services.AddScoped<ICategoryRepository, CategoryRepository>();
-        services.AddScoped<ITagRepository, TagRepository>(); 
-
-        // Unit of Work
-        services.AddScoped<IApplicationUnitOfWork, ApplicationUnitOfWork>();
-
+            options.UseMongoDB(connectionString, databaseName));
+            
+        // Outros serviços...
+        
         return services;
     }
 }

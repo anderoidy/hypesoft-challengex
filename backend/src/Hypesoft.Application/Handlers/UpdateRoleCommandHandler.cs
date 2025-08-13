@@ -45,8 +45,9 @@ namespace Hypesoft.Application.Handlers
                 existingRole.Name = request.Name;
                 existingRole.NormalizedName = request.Name.ToUpperInvariant();
                 existingRole.Description = request.Description;
-                existingRole.ModifiedAt = DateTimeOffset.UtcNow;
-                existingRole.ModifiedBy = request.ModifiedBy ?? "System";
+                
+                // Atualiza informações de auditoria usando os métodos apropriados
+                existingRole.SetLastModifiedBy(request.ModifiedBy ?? "System");
 
                 // Salva as alterações
                 var result = await _roleManager.UpdateAsync(existingRole);

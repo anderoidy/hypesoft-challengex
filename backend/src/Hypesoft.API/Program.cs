@@ -8,8 +8,34 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Hypesoft.Infrastructure.Auth;
 using Microsoft.ApplicationInsights;
+using MongoDB.Driver;
+using Microsoft.AspNetCore.Identity;
+using Hypesoft.Domain.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configuração do MongoDB
+var mongoDBSettings = builder.Configuration.GetSection(MongoDBSettings.SectionName).Get<MongoDBSettings>();
+if (mongoDBSettings == null || string.IsNullOrEmpty(mongoDBSettings.ConnectionString) || string.IsNullOrEmpty(mongoDBSettings.DatabaseName))
+{
+    throw new InvalidOperationException("Configuração do MongoDB não encontrada ou inválida no appsettings.json");
+}
+
+// Configurar o cliente MongoDB
+builder.Services.AddSingleton<IMongoClient>(sp => 
+    new MongoClient(MongoClientSettings.FromConnectionString(mongoDBSettings.ConnectionString)));
+
+// Configurar o banco de dados MongoDB
+builder.Services.AddScoped<IMongoDatabase>(sp => 
+    sp.GetRequiredService<IMongoClient>().GetDatabase(mongoDBSettings.DatabaseName));
+
+// Configurar o ApplicationDbContext
+builder.Services.AddScoped<ApplicationDbContext>(sp =>
+{
+    var client = sp.GetRequiredService<IMongoClient>();
+    var database = client.GetDatabase(mongoDBSettings.DatabaseName);
+    return new ApplicationDbContext(database);
+});
 
 // Configure MongoDB Settings
 builder.Services.Configure<MongoDBSettings>(
@@ -25,6 +51,11 @@ builder.Services.AddMediatR(cfg =>
 
 // Configuração do AutoMapper
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+// Configuração dos repositórios
+builder.Services.AddScoped(typeof(IRepository<>), typeof(RepositoryBase<>));
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 // Registrar serviços das camadas Application e Infrastructure
 builder.Services.AddApplicationServices();
@@ -79,14 +110,12 @@ builder.Services.AddApplicationInsightsTelemetry(options =>
     options.RequestCollectionOptions.TrackExceptions = true;
 });
 
-// Add Health Checks
+// Configuração do Health Check
 builder.Services.AddHealthChecks()
     .AddMongoDb(
-        mongodbConnectionString: builder.Configuration.GetConnectionString("MongoDB"),
+        mongodbConnectionString: mongoDBSettings.ConnectionString,
         name: "mongodb",
-        timeout: TimeSpan.FromSeconds(3),
-        tags: new[] { "ready" })
-    .AddCheck<MongoDbHealthCheck>("mongodb-custom");
+        tags: new[] { "ready" });
 
 // Add custom health check for MongoDB
 builder.Services.AddSingleton<MongoDbHealthCheck>();
@@ -164,13 +193,6 @@ builder.Services.AddSwaggerGen(c =>
     // c.OperationFilter<AddResponseHeadersFilter>();
 });
 
-// Configuração do Health Check
-builder.Services.AddHealthChecks()
-    .AddMongoDb(
-        mongodbConnectionString: builder.Configuration.GetSection("MongoDBSettings:ConnectionString").Value ?? "mongodb://localhost:27017",
-        name: "mongodb",
-        tags: new[] { "ready" });
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -205,14 +227,11 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-app.UseHttpsRedirection();
-
-app.UseCors("AllowAll");
-
 // Add Authentication & Authorization middleware
+app.UseHttpsRedirection();
+app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 // Add health check endpoints
@@ -241,6 +260,10 @@ app.Use(async (context, next) =>
 
     await next();
 });
+
+//Banco 
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseMongoDB(connectionString, databaseName));
 
 app.MapHealthChecks("/health");
 

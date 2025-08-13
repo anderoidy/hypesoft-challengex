@@ -27,12 +27,11 @@ namespace Hypesoft.API.Controllers
         }
 
         /// <summary>
-        /// Gets a paginated list of products with optional search term
+        /// Obtém uma lista paginada de produtos
         /// </summary>
-        /// <param name="search">Optional search term to filter products</param>
-        /// <param name="pageNumber">Page number (default: 1)</param>
-        /// <param name="pageSize">Number of items per page (default: 10, max: 100)</param>
-        /// <returns>A paginated list of products</returns>
+        /// <param name="search">Termo de busca opcional</param>
+        /// <param name="pageNumber">Número da página (padrão: 1)</param>
+        /// <param name="pageSize">Itens por página (padrão: 10, máximo: 100)</param>
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -44,30 +43,28 @@ namespace Hypesoft.API.Controllers
         {
             try
             {
-                if (pageNumber < 1) pageNumber = 1;
-                if (pageSize < 1 || pageSize > 100) pageSize = 10;
+                pageNumber = Math.Max(1, pageNumber);
+                pageSize = Math.Clamp(pageSize, 1, 100);
 
                 var query = new GetAllProductsQuery(search, pageNumber, pageSize);
                 var result = await _mediator.Send(query);
 
-                if (result.Status == ResultStatus.NotFound)
-                    return NotFound(result);
-
-                return Ok(result);
+                return result.Status == ResultStatus.NotFound 
+                    ? NotFound() 
+                    : Ok(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving products");
-                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while retrieving products");
+                _logger.LogError(ex, "Erro ao buscar produtos");
+                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao buscar os produtos");
             }
         }
 
         /// <summary>
-        /// Gets a single product by ID
+        /// Obtém um produto pelo ID
         /// </summary>
-        /// <param name="id">The product ID</param>
-        /// <returns>The requested product</returns>
-        [HttpGet("{id}")]
+        /// <param name="id">ID do produto</param>
+        [HttpGet("{id:guid}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -78,24 +75,23 @@ namespace Hypesoft.API.Controllers
                 var query = new GetProductByIdQuery(id);
                 var result = await _mediator.Send(query);
 
-                if (result.Status == ResultStatus.NotFound)
-                    return NotFound(result);
-
-                return Ok(result);
+                return result.Status == ResultStatus.NotFound 
+                    ? NotFound() 
+                    : Ok(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving product with ID {ProductId}", id);
-                return StatusCode(StatusCodes.Status500InternalServerError, $"An error occurred while retrieving product with ID {id}");
+                _logger.LogError(ex, "Erro ao buscar produto com ID {ProductId}", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, $"Ocorreu um erro ao buscar o produto com ID {id}");
             }
         }
 
         /// <summary>
-        /// Creates a new product
+        /// Cria um novo produto
         /// </summary>
-        /// <param name="command">The product data</param>
-        /// <returns>The created product ID</returns>
+        /// <param name="command">Dados do produto</param>
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -112,24 +108,24 @@ namespace Hypesoft.API.Controllers
                     return BadRequest(result.ValidationErrors);
 
                 if (result.Status == ResultStatus.NotFound)
-                    return NotFound(result);
+                    return NotFound("Categoria não encontrada");
 
                 return CreatedAtAction(nameof(GetById), new { id = result.Value }, new { id = result.Value });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating product");
-                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while creating the product");
+                _logger.LogError(ex, "Erro ao criar produto");
+                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao criar o produto");
             }
         }
 
         /// <summary>
-        /// Updates an existing product
+        /// Atualiza um produto existente
         /// </summary>
-        /// <param name="id">The product ID</param>
-        /// <param name="command">The updated product data</param>
-        /// <returns>No content if successful</returns>
-        [HttpPut("{id}")]
+        /// <param name="id">ID do produto</param>
+        /// <param name="command">Dados atualizados do produto</param>
+        [HttpPut("{id:guid}")]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -139,7 +135,7 @@ namespace Hypesoft.API.Controllers
             try
             {
                 if (id != command.Id)
-                    return BadRequest("ID in the URL does not match the ID in the request body");
+                    return BadRequest("ID na URL não corresponde ao ID no corpo da requisição");
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
@@ -147,7 +143,7 @@ namespace Hypesoft.API.Controllers
                 var result = await _mediator.Send(command);
 
                 if (result.Status == ResultStatus.NotFound)
-                    return NotFound();
+                    return NotFound("Produto ou categoria não encontrada");
 
                 if (result.Status == ResultStatus.Invalid)
                     return BadRequest(result.ValidationErrors);
@@ -156,17 +152,17 @@ namespace Hypesoft.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating product with ID {ProductId}", id);
-                return StatusCode(StatusCodes.Status500InternalServerError, $"An error occurred while updating product with ID {id}");
+                _logger.LogError(ex, "Erro ao atualizar produto com ID {ProductId}", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, $"Ocorreu um erro ao atualizar o produto com ID {id}");
             }
         }
 
         /// <summary>
-        /// Deletes a product
+        /// Remove um produto
         /// </summary>
-        /// <param name="id">The product ID to delete</param>
-        /// <returns>No content if successful</returns>
-        [HttpDelete("{id}")]
+        /// <param name="id">ID do produto a ser removido</param>
+        [HttpDelete("{id:guid}")]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -178,14 +174,14 @@ namespace Hypesoft.API.Controllers
                 var result = await _mediator.Send(command);
 
                 if (result.Status == ResultStatus.NotFound)
-                    return NotFound();
+                    return NotFound("Produto não encontrado");
 
                 return NoContent();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting product with ID {ProductId}", id);
-                return StatusCode(StatusCodes.Status500InternalServerError, $"An error occurred while deleting product with ID {id}");
+                _logger.LogError(ex, "Erro ao remover produto com ID {ProductId}", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, $"Ocorreu um erro ao remover o produto com ID {id}");
             }
         }
     }

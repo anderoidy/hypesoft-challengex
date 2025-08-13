@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
 using Hypesoft.Domain.Common;
+using Hypesoft.Domain.Common.Interfaces;
 using Hypesoft.Domain.Entities;
 
 namespace Hypesoft.Domain.Repositories
@@ -14,12 +16,28 @@ namespace Hypesoft.Domain.Repositories
     public interface ICategoryRepository : IRepository<Category>
     {
         /// <summary>
+        /// Verifies if a category name is unique.
+        /// </summary>
+        /// <param name="name">The name to check.</param>
+        /// <param name="excludeId">Optional ID to exclude from the check (useful for updates).</param>
+        /// <param name="cancellationToken">A <see cref="CancellationToken"/> to observe while waiting for the task to complete.</param>
+        /// <returns>True if the name is unique, false otherwise.</returns>
+        Task<bool> IsNameUniqueAsync(string name, Guid? excludeId = null, CancellationToken cancellationToken = default);
+        /// <summary>
         /// Gets a category by its slug asynchronously.
         /// </summary>
         /// <param name="slug">The slug of the category.</param>
         /// <param name="cancellationToken">A <see cref="CancellationToken"/> to observe while waiting for the task to complete.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the category, or null if not found.</returns>
         Task<Category?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Checks if any category matches the given predicate.
+        /// </summary>
+        /// <param name="predicate">The predicate to filter categories.</param>
+        /// <param name="cancellationToken">A <see cref="CancellationToken"/> to observe while waiting for the task to complete.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains true if any category matches the predicate; otherwise, false.</returns>
+        Task<bool> ExistsAsync(Expression<Func<Category, bool>> predicate, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets a category with its parent and child categories by ID asynchronously.

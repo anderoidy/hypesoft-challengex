@@ -32,7 +32,7 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
         {
             // Validate SKU uniqueness only if SKU is provided
             if (!string.IsNullOrEmpty(request.Sku) && 
-                !await _uow.Products.IsSkuUniqueAsync(request.Sku, false, cancellationToken))
+                !await _uow.Products.IsSkuUniqueAsync(request.Sku, null, cancellationToken))
             {
                 return Result.Invalid(new ValidationError
                 {
@@ -51,21 +51,17 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
 
             // Create new product using the factory method
             var product = new Product(
-                request.Name,
-                request.Description,
-                request.Price,
-                request.CategoryId,
-                request.Sku,
-                request.Barcode,
-                request.DiscountPrice,
-                request.StockQuantity,
-                request.ImageUrl,
-                request.Weight,
-                request.Height,
-                request.Width,
-                request.Length,
-                request.IsFeatured,
-                request.IsPublished);
+                name: request.Name,
+                description: request.Description,
+                price: request.Price,
+                categoryId: request.CategoryId,
+                sku: request.Sku,
+                barcode: request.Barcode,
+                discountPrice: request.DiscountPrice,
+                stockQuantity: request.StockQuantity,
+                imageUrl: request.ImageUrl,
+                isFeatured: request.IsFeatured,
+                isPublished: request.IsPublished);
 
             // Add product to repository
             await _uow.Products.AddAsync(product, cancellationToken);
