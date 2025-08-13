@@ -160,4 +160,31 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 
 ---
 
-Desenvolvido com 💜 por [Seu Nome]
+Desenvolvido com 💜 por Anderson Pereira 
+
+Status do Projeto
+Este projeto foi desenvolvido como parte de um desafio técnico para uma vaga de desenvolvedor.
+
+Até o momento, consegui implementar:
+
+Estrutura inicial do frontend 
+
+Telas principais carregando corretamente no ambiente local.
+
+Configuração parcial de rotas e componentes no frontend.
+
+O que ficou pendente:
+
+Correção de erros de build no backend (.NET).
+
+Configuração da conexão entre frontend e backend.
+
+Implementação e testes completos das operações de CRUD.
+
+Observações:
+
+O backend ainda não compila devido a erros de configuração e dependências.
+
+O frontend funciona parcialmente, exibindo as telas, mas as funcionalidades de integração com a API ainda não estão operacionais.
+
+
