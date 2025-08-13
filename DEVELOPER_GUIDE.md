@@ -1,165 +1,245 @@
+# Guia do Desenvolvedor - Hypesoft Challenge
 
-# Hypesoft Challenge X – Instruções para Execução
+Este guia fornece informações detalhadas sobre como configurar, executar e trabalhar com o ambiente de desenvolvimento do projeto Hypesoft Challenge.
 
-Este projeto foi desenvolvido como parte de um desafio técnico para vaga de desenvolvedor.
-Ele é composto por **backend (.NET 7 + MongoDB)** e **frontend (Next.js 14 + TypeScript)**.
+## 📋 Pré-requisitos
 
----
+Antes de começar, certifique-se de ter instalado em sua máquina:
 
-## 📌 Pré-requisitos
+- **Docker** (versão 20.10.0 ou superior)
+- **Docker Compose** (versão 1.29.0 ou superior)
+- **Git** (para controle de versão)
+- **OpenSSL** (para geração de certificados)
+- **Node.js** (versão 18 ou superior, para desenvolvimento frontend)
+- **.NET 9 SDK** (para desenvolvimento backend)
 
-Antes de começar, instale:
+## 🚀 Configuração Inicial
 
-* **Backend**
-
-  * [.NET 7 SDK](https://dotnet.microsoft.com/download/dotnet/7.0)
-  * [MongoDB 6+](https://www.mongodb.com/try/download/community)
-  * [Git](https://git-scm.com/)
-
-* **Frontend**
-
-  * [Node.js 18+](https://nodejs.org/en/)
-  * npm 9+ ou yarn 1.22+
-
----
-
-## 🚀 Passo a Passo para Rodar o Projeto
-
-### 1️⃣ Clonar o Repositório
+### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/anderoidy/hypesoft-challengex.git
+git clone https://github.com/seu-usuario/hypesoft-challengex.git
 cd hypesoft-challengex
 ```
 
----
+### 2. Configure as variáveis de ambiente
 
-### 2️⃣ Configurar e Rodar o Backend
-
-> ⚠ Observação: O backend ainda possui erros de build e não está totalmente funcional.
-> Mesmo assim, seguem os passos de execução previstos.
-
-1. Vá até a pasta da API:
-
+1. Faça uma cópia do arquivo `.env.example` para `.env`:
    ```bash
-   cd backend/src/Hypesoft.API
+   cp .env.example .env
    ```
 
-2. Crie o arquivo `appsettings.Development.json` com o conteúdo:
+2. Edite o arquivo `.env` conforme necessário para o seu ambiente de desenvolvimento.
 
-   ```json
-   {
-     "Logging": {
-       "LogLevel": {
-         "Default": "Debug",
-         "Microsoft": "Information",
-         "Microsoft.AspNetCore": "Warning",
-         "Microsoft.Hosting.Lifetime": "Information"
-       }
-     },
-     "MongoDBSettings": {
-       "DatabaseName": "HypesoftDB_Dev",
-       "ConnectionString": "mongodb://localhost:27017"
-     },
-     "JwtSettings": {
-       "Secret": "CHAVE_SECRETA_AQUI_COM_PELO_MENOS_32_CARACTERES",
-       "Issuer": "Hypesoft.API",
-       "Audience": "Hypesoft.Clients",
-       "ExpirationInMinutes": 1440
-     },
-     "DetailedErrors": true,
-     "UseInMemoryDatabase": true
-   }
-   ```
+### 3. Gere os certificados SSL
 
-3. Para iniciar (quando corrigido):
+Execute o script para gerar certificados autoassinados:
 
+```bash
+./scripts/generate-ssl-certs.sh
+```
+
+> **Nota:** No Windows, você pode precisar executar isso no Git Bash ou WSL.
+
+## 🏃‍♂️ Executando o Ambiente
+
+### Iniciando todos os serviços
+
+Para iniciar todo o ambiente de desenvolvimento, execute:
+
+```bash
+./start-dev.sh
+```
+
+Este script irá:
+1. Verificar as dependências
+2. Gerar certificados SSL (se necessário)
+3. Configurar os hosts locais
+4. Iniciar todos os containers Docker
+
+### Acessando os serviços
+
+Após a inicialização, você poderá acessar:
+
+- **Frontend**: https://localhost:3000
+- **Backend API**: https://api.localhost/swagger
+- **Keycloak Admin Console**: https://auth.localhost/admin
+  - Usuário: `admin`
+  - Senha: `admin` (ou a senha definida em `KEYCLOAK_ADMIN_PASSWORD`)
+- **MongoDB Express**: http://mongo-express.localhost:8081
+  - Usuário: `admin` (ou o valor de `MONGO_EXPRESS_USERNAME`)
+  - Senha: `admin` (ou o valor de `MONGO_EXPRESS_PASSWORD`)
+
+### Verificando o status dos serviços
+
+Para verificar o status de todos os serviços em execução:
+
+```bash
+./status-dev.sh
+```
+
+### Parando o ambiente
+
+Para parar todos os serviços e limpar os recursos:
+
+```bash
+./stop-dev.sh
+```
+
+## 🛠️ Desenvolvimento
+
+### Estrutura do Projeto
+
+```
+hypesoft-challengex/
+├── backend/              # Código-fonte do backend (.NET 9)
+├── frontend/             # Código-fonte do frontend (Next.js 14)
+├── nginx/                # Configurações do Nginx
+│   ├── conf.d/           # Configurações de virtual hosts
+│   └── nginx.conf        # Configuração principal do Nginx
+├── keycloak/             # Configurações do Keycloak
+│   ├── realm-export.json # Configuração do Realm
+│   └── setup-keycloak.sh # Script de configuração
+├── scripts/              # Scripts úteis
+├── .env.example          # Exemplo de variáveis de ambiente
+├── docker-compose.yml    # Configuração do Docker Compose
+└── README.md             # Documentação principal
+```
+
+### Desenvolvimento Backend
+
+O backend foi desenvolvido em .NET 9 seguindo os princípios da Clean Architecture e CQRS.
+
+#### Estrutura do Backend
+
+```
+backend/
+├── Hypesoft.Application/    # Camada de aplicação (CQRS, DTOs, Interfaces)
+├── Hypesoft.Domain/         # Camada de domínio (Entidades, Interfaces)
+├── Hypesoft.Infrastructure/ # Camada de infraestrutura (Repositórios, Banco de Dados)
+└── Hypesoft.API/            # Camada de API (Controllers, Middlewares)
+```
+
+#### Executando o backend localmente
+
+1. Navegue até o diretório do backend:
    ```bash
-   dotnet run
+   cd backend
    ```
 
-A API estará disponível em:
+2. Restaure as dependências e execute o projeto:
+   ```bash
+   dotnet restore
+   dotnet run --project Hypesoft.API
+   ```
 
-* [http://localhost:5000](http://localhost:5000)
-* [https://localhost:5001](https://localhost:5001)
+3. A API estará disponível em: https://localhost:5001
 
-Swagger: [http://localhost:5000/swagger](http://localhost:5000/swagger)
+### Desenvolvimento Frontend
 
----
+O frontend foi desenvolvido com Next.js 14, TypeScript, Tailwind CSS e Shadcn/ui.
 
-### 3️⃣ Configurar e Rodar o Frontend
+#### Estrutura do Frontend
 
-1. Abra outro terminal e vá para a pasta do frontend:
+```
+frontend/
+├── public/          # Arquivos estáticos
+├── src/
+│   ├── app/         # Páginas e rotas (App Router)
+│   ├── components/  # Componentes reutilizáveis
+│   ├── lib/         # Utilitários e configurações
+│   └── styles/      # Estilos globais
+└── package.json     # Dependências e scripts
+```
 
+#### Executando o frontend localmente
+
+1. Navegue até o diretório do frontend:
    ```bash
    cd frontend
    ```
 
-2. Instale as dependências:
-
+2. Instale as dependências e execute o projeto:
    ```bash
    npm install
-   # ou
-   yarn
-   ```
-
-3. Copie o arquivo `.env.example` para `.env.local`:
-
-   ```bash
-   cp .env.example .env.local
-   ```
-
-   No `.env.local`, configure:
-
-   ```
-   NEXT_PUBLIC_API_URL=http://localhost:5000
-   ```
-
-4. Inicie o servidor de desenvolvimento:
-
-   ```bash
    npm run dev
-   # ou
-   yarn dev
    ```
 
-O frontend estará disponível em:
-[http://localhost:3000](http://localhost:3000)
+3. O frontend estará disponível em: http://localhost:3000
 
----
+## 🔒 Autenticação e Autorização
 
-## 📂 Estrutura do Projeto
+O projeto utiliza Keycloak para autenticação e autorização. O fluxo de autenticação é baseado em OpenID Connect (OIDC).
 
+### Configuração do Keycloak
+
+1. Acesse o Console de Administração do Keycloak em: https://auth.localhost/admin
+2. Faça login com as credenciais de administrador
+3. Navegue até o Realm "hypesoft"
+4. Configure os clients, usuários e roles conforme necessário
+
+### Integração com o Backend
+
+O backend está configurado para validar tokens JWT emitidos pelo Keycloak. As configurações podem ser ajustadas no arquivo `appsettings.json` ou através de variáveis de ambiente.
+
+## 📦 Implantação
+
+### Construindo as imagens Docker
+
+Para construir as imagens Docker para produção:
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml build
 ```
-hypesoft-challengex/
-├── backend/
-│   ├── src/Hypesoft.API/         # API .NET
-│   ├── Hypesoft.Application/     # Camada de aplicação
-│   ├── Hypesoft.Domain/          # Modelos de domínio
-│   └── Hypesoft.Infrastructure/  # Infraestrutura e repositórios
-├── frontend/                     # Frontend Next.js
-│   ├── src/
-│   ├── components/
-│   ├── features/
-│   └── styles/
-└── README.md                     # Este arquivo
-```
 
----
+### Implantando em produção
 
-## 📌 Status do Projeto
+1. Configure as variáveis de ambiente de produção em `.env.production`
+2. Execute o comando de implantação:
+   ```bash
+   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+   ```
 
-* ✅ Estrutura do frontend e telas principais carregando localmente.
-* ✅ Configuração parcial de rotas e componentes no frontend.
-* ❌ CRUD não implementado.
-* ❌ Backend com erros de build e conexão ainda não finalizada.
+## 🐛 Solução de Problemas
 
----
+### Problemas comuns
+
+1. **Erro de permissão nos scripts**
+   ```bash
+   chmod +x *.sh
+   chmod +x scripts/*.sh
+   ```
+
+2. **Problemas com certificados SSL**
+   - Certifique-se de que os certificados foram gerados corretamente
+   - Adicione os certificados às autoridades de certificação confiáveis do seu sistema operacional
+
+3. **Containers não iniciam**
+   ```bash
+   docker-compose logs <nome_do_serviço>
+   ```
+
+4. **Problemas de rede**
+   - Verifique se as portas necessárias estão disponíveis
+   - Verifique se os nomes de domínio estão corretamente mapeados no arquivo `/etc/hosts`
+
+## 🤝 Contribuição
+
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Faça commit das suas alterações (`git commit -m 'Add some AmazingFeature'`)
+4. Faça push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
 
 ## 📄 Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 🙏 Agradecimentos
+
+- Equipe Hypesoft pelo desafio
+- Comunidade de código aberto pelas ferramentas incríveis
 
 ---
 
-
+<p align="center">Desenvolvido com ❤️ para o Desafio Hypesoft</p>
