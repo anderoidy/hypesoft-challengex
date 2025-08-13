@@ -11,13 +11,15 @@ namespace Hypesoft.UnitTests.TestData
 
         public bool Equals(ValidationError other)
         {
-            if (other is null) return false;
-            if (ReferenceEquals(this, other)) return true;
-            
-            return string.Equals(Identifier, other.Identifier, StringComparison.OrdinalIgnoreCase) &&
-                   string.Equals(ErrorMessage, other.ErrorMessage) &&
-                   string.Equals(ErrorCode, other.ErrorCode) &&
-                   Severity == other.Severity;
+            if (other is null)
+                return false;
+            if (ReferenceEquals(this, other))
+                return true;
+
+            return string.Equals(Identifier, other.Identifier, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(ErrorMessage, other.ErrorMessage)
+                && string.Equals(ErrorCode, other.ErrorCode)
+                && Severity == other.Severity;
         }
 
         public override bool Equals(object obj)
@@ -31,7 +33,8 @@ namespace Hypesoft.UnitTests.TestData
                 StringComparer.OrdinalIgnoreCase.GetHashCode(Identifier ?? string.Empty),
                 ErrorMessage?.GetHashCode() ?? 0,
                 ErrorCode?.GetHashCode() ?? 0,
-                Severity);
+                Severity
+            );
         }
     }
 
@@ -39,6 +42,6 @@ namespace Hypesoft.UnitTests.TestData
     {
         Error = 0,
         Warning = 1,
-        Info = 2
+        Info = 2,
     }
 }

@@ -7,13 +7,13 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Hypesoft.Application.Common.Interfaces;
 using Hypesoft.Application.DTOs;
 using Hypesoft.Application.Features.Products.Queries.GetAllProducts;
 using Hypesoft.Domain.Entities;
 using Hypesoft.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Hypesoft.Application.Common.Interfaces;
 using Xunit;
 
 namespace Hypesoft.IntegrationTests.Controllers;
@@ -32,7 +32,8 @@ public class ProductsControllerTests : TestBase
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<PaginatedList<ProductDto>.PaginatedData>();
+        var result =
+            await response.Content.ReadFromJsonAsync<PaginatedList<ProductDto>.PaginatedData>();
         result.Should().NotBeNull();
         result!.Items.Should().BeEmpty();
         result.TotalCount.Should().Be(0);
@@ -54,7 +55,7 @@ public class ProductsControllerTests : TestBase
                 Description = "Descrição do produto 1",
                 Price = 100.50m,
                 CategoryId = Guid.NewGuid(),
-                IsPublished = true
+                IsPublished = true,
             },
             new()
             {
@@ -63,7 +64,7 @@ public class ProductsControllerTests : TestBase
                 Description = "Descrição do produto 2",
                 Price = 200.75m,
                 CategoryId = Guid.NewGuid(),
-                IsPublished = true
+                IsPublished = true,
             },
             new()
             {
@@ -72,8 +73,8 @@ public class ProductsControllerTests : TestBase
                 Description = "Outra descrição",
                 Price = 300.00m,
                 CategoryId = Guid.NewGuid(),
-                IsPublished = true
-            }
+                IsPublished = true,
+            },
         };
 
         await DbContext.Products.AddRangeAsync(products);
@@ -84,8 +85,9 @@ public class ProductsControllerTests : TestBase
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<PaginatedList<ProductDto>.PaginatedData>();
-        
+        var result =
+            await response.Content.ReadFromJsonAsync<PaginatedList<ProductDto>.PaginatedData>();
+
         result.Should().NotBeNull();
         result!.Items.Should().HaveCount(2);
         result.TotalCount.Should().Be(3);
@@ -109,7 +111,7 @@ public class ProductsControllerTests : TestBase
                 Description = "Smartphone da Apple",
                 Price = 5000.00m,
                 CategoryId = Guid.NewGuid(),
-                IsPublished = true
+                IsPublished = true,
             },
             new()
             {
@@ -118,7 +120,7 @@ public class ProductsControllerTests : TestBase
                 Description = "Smartphone da Samsung",
                 Price = 4500.00m,
                 CategoryId = Guid.NewGuid(),
-                IsPublished = true
+                IsPublished = true,
             },
             new()
             {
@@ -127,8 +129,8 @@ public class ProductsControllerTests : TestBase
                 Description = "Acessório para smartphone",
                 Price = 250.00m,
                 CategoryId = Guid.NewGuid(),
-                IsPublished = true
-            }
+                IsPublished = true,
+            },
         };
 
         await DbContext.Products.AddRangeAsync(products);
@@ -139,8 +141,9 @@ public class ProductsControllerTests : TestBase
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<PaginatedList<ProductDto>.PaginatedData>();
-        
+        var result =
+            await response.Content.ReadFromJsonAsync<PaginatedList<ProductDto>.PaginatedData>();
+
         result.Should().NotBeNull();
         result!.Items.Should().HaveCount(3); // Todos os produtos contêm "phone" no nome ou descrição
         result.TotalCount.Should().Be(3);
@@ -148,12 +151,14 @@ public class ProductsControllerTests : TestBase
 
     [Theory]
     [InlineData(0, 10)] // Página inválida
-    [InlineData(1, 0)]  // Tamanho de página inválido
+    [InlineData(1, 0)] // Tamanho de página inválido
     [InlineData(1, 101)] // Tamanho de página maior que o máximo permitido
     public async Task GetAll_WithInvalidPagination_ReturnsBadRequest(int pageNumber, int pageSize)
     {
         // Act
-        var response = await TestClient.GetAsync($"{BaseUrl}?pageNumber={pageNumber}&pageSize={pageSize}");
+        var response = await TestClient.GetAsync(
+            $"{BaseUrl}?pageNumber={pageNumber}&pageSize={pageSize}"
+        );
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -167,7 +172,7 @@ public class ProductsControllerTests : TestBase
         {
             Id = Guid.NewGuid(),
             Name = "Eletrônicos",
-            Description = "Produtos eletrônicos em geral"
+            Description = "Produtos eletrônicos em geral",
         };
 
         var product = new Product
@@ -178,7 +183,7 @@ public class ProductsControllerTests : TestBase
             Price = 3500.00m,
             CategoryId = category.Id,
             IsPublished = true,
-            StockQuantity = 10
+            StockQuantity = 10,
         };
 
         await DbContext.Categories.AddAsync(category);
@@ -191,7 +196,7 @@ public class ProductsControllerTests : TestBase
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<ProductDto>();
-        
+
         result.Should().NotBeNull();
         result!.Id.Should().Be(product.Id);
         result.Name.Should().Be(product.Name);
@@ -240,7 +245,7 @@ public class ProductsControllerTests : TestBase
             Price = 100.00m,
             CategoryId = Guid.NewGuid(),
             IsPublished = false,
-            StockQuantity = 5
+            StockQuantity = 5,
         };
 
         await DbContext.Products.AddAsync(product);
@@ -261,7 +266,7 @@ public class ProductsControllerTests : TestBase
         {
             Id = Guid.NewGuid(),
             Name = "Eletrônicos",
-            Description = "Produtos eletrônicos em geral"
+            Description = "Produtos eletrônicos em geral",
         };
 
         await DbContext.Categories.AddAsync(category);
@@ -276,7 +281,7 @@ public class ProductsControllerTests : TestBase
             CategoryId = category.Id,
             StockQuantity = 15,
             Sku = "SMARTPHONE-001",
-            Barcode = "1234567890123"
+            Barcode = "1234567890123",
         };
 
         // Act - Envia a requisição para criar o produto
@@ -284,11 +289,11 @@ public class ProductsControllerTests : TestBase
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        
+
         // Verifica o cabeçalho Location
         response.Headers.Location.Should().NotBeNull();
         response.Headers.Location!.ToString().Should().Contain("/api/products/");
-        
+
         // Verifica o corpo da resposta
         var result = await response.Content.ReadFromJsonAsync<ProductDto>();
         result.Should().NotBeNull();
@@ -318,7 +323,7 @@ public class ProductsControllerTests : TestBase
             Description = "Este produto não deve ser criado",
             Price = 100.00m,
             CategoryId = Guid.NewGuid(), // ID que não existe no banco de dados
-            StockQuantity = 10
+            StockQuantity = 10,
         };
 
         // Act - Tenta criar o produto com categoria inexistente
@@ -326,7 +331,7 @@ public class ProductsControllerTests : TestBase
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        
+
         // Verifica se a mensagem de erro é apropriada
         var error = await response.Content.ReadAsStringAsync();
         error.Should().Contain("Categoria não encontrada");
@@ -355,7 +360,7 @@ public class ProductsControllerTests : TestBase
             Sku = "DUPLICATE-SKU",
             CategoryId = category.Id,
             Price = 100.00m,
-            IsPublished = true
+            IsPublished = true,
         };
 
         await DbContext.Categories.AddAsync(category);
@@ -370,7 +375,7 @@ public class ProductsControllerTests : TestBase
             Price = 200.00m,
             CategoryId = category.Id,
             StockQuantity = 5,
-            Sku = "DUPLICATE-SKU" // SKU duplicado
+            Sku = "DUPLICATE-SKU", // SKU duplicado
         };
 
         // Act - Tenta criar o produto com SKU duplicado
@@ -385,38 +390,54 @@ public class ProductsControllerTests : TestBase
     public static IEnumerable<object[]> GetInvalidProducts()
     {
         // Produto sem nome
-        yield return new object[] { new { 
-            Description = "Produto sem nome", 
-            Price = 100.00m, 
-            CategoryId = Guid.NewGuid(),
-            StockQuantity = 10 
-        }};
+        yield return new object[]
+        {
+            new
+            {
+                Description = "Produto sem nome",
+                Price = 100.00m,
+                CategoryId = Guid.NewGuid(),
+                StockQuantity = 10,
+            },
+        };
 
         // Produto com preço negativo
-        yield return new object[] { new { 
-            Name = "Produto com preço negativo",
-            Description = "Este produto tem preço inválido", 
-            Price = -10.00m, 
-            CategoryId = Guid.NewGuid(),
-            StockQuantity = 5 
-        }};
+        yield return new object[]
+        {
+            new
+            {
+                Name = "Produto com preço negativo",
+                Description = "Este produto tem preço inválido",
+                Price = -10.00m,
+                CategoryId = Guid.NewGuid(),
+                StockQuantity = 5,
+            },
+        };
 
         // Produto sem categoria
-        yield return new object[] { new { 
-            Name = "Produto sem categoria",
-            Description = "Este produto não tem categoria", 
-            Price = 50.00m,
-            StockQuantity = 2 
-        }};
+        yield return new object[]
+        {
+            new
+            {
+                Name = "Produto sem categoria",
+                Description = "Este produto não tem categoria",
+                Price = 50.00m,
+                StockQuantity = 2,
+            },
+        };
 
         // Produto com quantidade em estoque negativa
-        yield return new object[] { new { 
-            Name = "Produto com estoque negativo",
-            Description = "Este produto tem quantidade em estoque inválida", 
-            Price = 75.50m, 
-            CategoryId = Guid.NewGuid(),
-            StockQuantity = -5 
-        }};
+        yield return new object[]
+        {
+            new
+            {
+                Name = "Produto com estoque negativo",
+                Description = "Este produto tem quantidade em estoque inválida",
+                Price = 75.50m,
+                CategoryId = Guid.NewGuid(),
+                StockQuantity = -5,
+            },
+        };
     }
 
     [Fact]
@@ -425,7 +446,7 @@ public class ProductsControllerTests : TestBase
         // Arrange - Cria uma categoria e um produto no banco de dados
         var category1 = new Category { Id = Guid.NewGuid(), Name = "Eletrônicos" };
         var category2 = new Category { Id = Guid.NewGuid(), Name = "Acessórios" };
-        
+
         var product = new Product
         {
             Id = Guid.NewGuid(),
@@ -436,7 +457,7 @@ public class ProductsControllerTests : TestBase
             StockQuantity = 10,
             Sku = "ORIGINAL-SKU",
             Barcode = "1111111111111",
-            IsPublished = false
+            IsPublished = false,
         };
 
         await DbContext.Categories.AddRangeAsync(category1, category2);
@@ -453,7 +474,7 @@ public class ProductsControllerTests : TestBase
             StockQuantity = 20,
             Sku = "UPDATED-SKU",
             Barcode = "2222222222222",
-            IsPublished = true
+            IsPublished = true,
         };
 
         // Act - Atualiza o produto
@@ -461,7 +482,7 @@ public class ProductsControllerTests : TestBase
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         // Verifica o corpo da resposta
         var result = await response.Content.ReadFromJsonAsync<ProductDto>();
         result.Should().NotBeNull();
@@ -488,10 +509,18 @@ public class ProductsControllerTests : TestBase
     {
         // Arrange - ID que não existe no banco de dados
         var nonExistingId = Guid.NewGuid();
-        var updateProductDto = new { Name = "Produto Inexistente", Price = 100.00m, CategoryId = Guid.NewGuid() };
+        var updateProductDto = new
+        {
+            Name = "Produto Inexistente",
+            Price = 100.00m,
+            CategoryId = Guid.NewGuid(),
+        };
 
         // Act - Tenta atualizar um produto que não existe
-        var response = await TestClient.PutAsJsonAsync($"{BaseUrl}/{nonExistingId}", updateProductDto);
+        var response = await TestClient.PutAsJsonAsync(
+            $"{BaseUrl}/{nonExistingId}",
+            updateProductDto
+        );
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -502,18 +531,41 @@ public class ProductsControllerTests : TestBase
     {
         // Arrange - Cria duas categorias e dois produtos no banco de dados
         var category = new Category { Id = Guid.NewGuid(), Name = "Eletrônicos" };
-        var product1 = new Product { Id = Guid.NewGuid(), Name = "Produto 1", Sku = "SKU-001", CategoryId = category.Id, Price = 100.00m };
-        var product2 = new Product { Id = Guid.NewGuid(), Name = "Produto 2", Sku = "SKU-002", CategoryId = category.Id, Price = 200.00m };
+        var product1 = new Product
+        {
+            Id = Guid.NewGuid(),
+            Name = "Produto 1",
+            Sku = "SKU-001",
+            CategoryId = category.Id,
+            Price = 100.00m,
+        };
+        var product2 = new Product
+        {
+            Id = Guid.NewGuid(),
+            Name = "Produto 2",
+            Sku = "SKU-002",
+            CategoryId = category.Id,
+            Price = 200.00m,
+        };
 
         await DbContext.Categories.AddAsync(category);
         await DbContext.Products.AddRangeAsync(product1, product2);
         await DbContext.SaveChangesAsync();
 
         // Tenta atualizar o produto 2 com o SKU do produto 1
-        var updateProductDto = new { Name = "Produto 2 Atualizado", Sku = "SKU-001", CategoryId = category.Id, Price = 250.00m };
+        var updateProductDto = new
+        {
+            Name = "Produto 2 Atualizado",
+            Sku = "SKU-001",
+            CategoryId = category.Id,
+            Price = 250.00m,
+        };
 
         // Act - Tenta atualizar com SKU duplicado
-        var response = await TestClient.PutAsJsonAsync($"{BaseUrl}/{product2.Id}", updateProductDto);
+        var response = await TestClient.PutAsJsonAsync(
+            $"{BaseUrl}/{product2.Id}",
+            updateProductDto
+        );
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -531,14 +583,19 @@ public class ProductsControllerTests : TestBase
             Name = "Produto Válido",
             Price = 100.00m,
             CategoryId = Guid.NewGuid(),
-            IsPublished = true
+            IsPublished = true,
         };
 
         await DbContext.Products.AddAsync(product);
         await DbContext.SaveChangesAsync();
 
         // Tenta atualizar com preço negativo (inválido)
-        var invalidUpdateDto = new { Name = "Produto Inválido", Price = -10.00m, CategoryId = Guid.NewGuid() };
+        var invalidUpdateDto = new
+        {
+            Name = "Produto Inválido",
+            Price = -10.00m,
+            CategoryId = Guid.NewGuid(),
+        };
 
         // Act - Tenta atualizar com dados inválidos
         var response = await TestClient.PutAsJsonAsync($"{BaseUrl}/{product.Id}", invalidUpdateDto);
@@ -558,7 +615,7 @@ public class ProductsControllerTests : TestBase
             Name = "Produto Original",
             Price = 100.00m,
             CategoryId = category.Id,
-            IsPublished = true
+            IsPublished = true,
         };
 
         await DbContext.Categories.AddAsync(category);
@@ -567,7 +624,12 @@ public class ProductsControllerTests : TestBase
 
         // Tenta atualizar com uma categoria que não existe
         var nonExistingCategoryId = Guid.NewGuid();
-        var updateDto = new { Name = "Produto Atualizado", Price = 150.00m, CategoryId = nonExistingCategoryId };
+        var updateDto = new
+        {
+            Name = "Produto Atualizado",
+            Price = 150.00m,
+            CategoryId = nonExistingCategoryId,
+        };
 
         // Act - Tenta atualizar com categoria inexistente
         var response = await TestClient.PutAsJsonAsync($"{BaseUrl}/{product.Id}", updateDto);
@@ -583,7 +645,7 @@ public class ProductsControllerTests : TestBase
     {
         // Arrange
         var client = new HttpClient();
-        
+
         // Act
         var response = await client.GetAsync(BaseUrl);
 
@@ -596,18 +658,20 @@ public class ProductsControllerTests : TestBase
     {
         // Arrange
         await AuthenticateAsync();
-        
+
         // Act
         var response = await TestClient.GetAsync(BaseUrl);
-        
+
         // Assert
         response.EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        
+
         var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<PaginatedList<ProductDto>>(content, 
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            
+        var result = JsonSerializer.Deserialize<PaginatedList<ProductDto>>(
+            content,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+
         Assert.NotNull(result);
         Assert.NotNull(result.Items);
     }
@@ -616,12 +680,16 @@ public class ProductsControllerTests : TestBase
     public async Task GetProducts_WithExpiredToken_ReturnsUnauthorized()
     {
         // Arrange - Create an expired token
-        var expiredToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjJ9.1B7X0CJZ3Z0Z5KZQ0Z5KZQ0Z5KZQ0Z5KZQ0Z5KZQ0Z5KZQ";
-        TestClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", expiredToken);
-        
+        var expiredToken =
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjJ9.1B7X0CJZ3Z0Z5KZQ0Z5KZQ0Z5KZQ0Z5KZQ0Z5KZQ0Z5KZQ";
+        TestClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            expiredToken
+        );
+
         // Act
         var response = await TestClient.GetAsync(BaseUrl);
-        
+
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -631,11 +699,14 @@ public class ProductsControllerTests : TestBase
     {
         // Arrange - Create an invalid token
         var invalidToken = "invalid.token.here";
-        TestClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", invalidToken);
-        
+        TestClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            invalidToken
+        );
+
         // Act
         var response = await TestClient.GetAsync(BaseUrl);
-        
+
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }

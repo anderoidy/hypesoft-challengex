@@ -18,11 +18,11 @@ public class MongoDbMigrationsTests : IClassFixture<TestBase>
     {
         _testBase = testBase;
         _dbContext = _testBase.DbContext;
-        
+
         // Get logger from service provider
         var loggerFactory = _testBase.ServiceProvider.GetRequiredService<ILoggerFactory>();
         var logger = loggerFactory.CreateLogger<MongoDbMigrator>();
-        
+
         _migrator = new MongoDbMigrator(_dbContext, logger);
     }
 
@@ -31,32 +31,34 @@ public class MongoDbMigrationsTests : IClassFixture<TestBase>
     {
         // Arrange - Get the products collection
         var productsCollection = _dbContext.Products;
-        
+
         // Act - Run migrations
         await _migrator.MigrateAsync();
-        
+
         // Assert - Verify indexes were created
-        using var cursor = await productsCollection.Database
-            .GetCollection<object>("Products")
-            .Indexes
-            .ListAsync();
-            
+        using var cursor = await productsCollection
+            .Database.GetCollection<object>("Products")
+            .Indexes.ListAsync();
+
         var indexes = await cursor.ToListAsync();
-        
+
         // Check for Sku index
-        Assert.Contains(indexes, i => 
-            i["name"].AsString == "sku_1" && 
-            i["unique"].AsBoolean == true);
-            
+        Assert.Contains(
+            indexes,
+            i => i["name"].AsString == "sku_1" && i["unique"].AsBoolean == true
+        );
+
         // Check for Barcode index
-        Assert.Contains(indexes, i => 
-            i["name"].AsString == "barcode_1" && 
-            i["unique"].AsBoolean == true);
-            
+        Assert.Contains(
+            indexes,
+            i => i["name"].AsString == "barcode_1" && i["unique"].AsBoolean == true
+        );
+
         // Check for text index on name and description
-        Assert.Contains(indexes, i => 
-            i["name"].AsString == "name_text_description_text" && 
-            i["textIndexVersion"] != null);
+        Assert.Contains(
+            indexes,
+            i => i["name"].AsString == "name_text_description_text" && i["textIndexVersion"] != null
+        );
     }
 
     [Fact]
@@ -64,10 +66,10 @@ public class MongoDbMigrationsTests : IClassFixture<TestBase>
     {
         // Arrange - Run migrations once
         await _migrator.MigrateAsync();
-        
+
         // Act - Run migrations again
         var exception = await Record.ExceptionAsync(() => _migrator.MigrateAsync());
-        
+
         // Assert - No exception should be thrown on second run
         Assert.Null(exception);
     }

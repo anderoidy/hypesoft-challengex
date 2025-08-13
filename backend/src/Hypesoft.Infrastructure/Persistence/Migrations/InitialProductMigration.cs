@@ -14,22 +14,34 @@ public class InitialProductMigration : IMongoDbMigration
     {
         // Create indexes for Products collection
         var products = context.Database.GetCollection<Product>("Products");
-        
+
         // Create a unique index on Sku
-        var skuIndexModel = new Microsoft.EntityFrameworkCore.MongoDB.IndexKeysDefinitionBuilder<Product>()
-            .Ascending(p => p.Sku);
-        
-        await products.Indexes.CreateOneAsync(new Microsoft.EntityFrameworkCore.MongoDB.IndexKeysDefinitionBuilder<Product>()
-            .Ascending(p => p.Sku), new Microsoft.EntityFrameworkCore.MongoDB.CreateIndexOptions { Unique = true });
-        
+        var skuIndexModel =
+            new Microsoft.EntityFrameworkCore.MongoDB.IndexKeysDefinitionBuilder<Product>().Ascending(
+                p => p.Sku
+            );
+
+        await products.Indexes.CreateOneAsync(
+            new Microsoft.EntityFrameworkCore.MongoDB.IndexKeysDefinitionBuilder<Product>().Ascending(
+                p => p.Sku
+            ),
+            new Microsoft.EntityFrameworkCore.MongoDB.CreateIndexOptions { Unique = true }
+        );
+
         // Create an index on Barcode
-        await products.Indexes.CreateOneAsync(new Microsoft.EntityFrameworkCore.MongoDB.IndexKeysDefinitionBuilder<Product>()
-            .Ascending(p => p.Barcode), new Microsoft.EntityFrameworkCore.MongoDB.CreateIndexOptions { Unique = true });
-        
+        await products.Indexes.CreateOneAsync(
+            new Microsoft.EntityFrameworkCore.MongoDB.IndexKeysDefinitionBuilder<Product>().Ascending(
+                p => p.Barcode
+            ),
+            new Microsoft.EntityFrameworkCore.MongoDB.CreateIndexOptions { Unique = true }
+        );
+
         // Create a text index for search
-        await products.Indexes.CreateOneAsync(new Microsoft.EntityFrameworkCore.MongoDB.IndexKeysDefinitionBuilder<Product>()
-            .Text(p => p.Name)
-            .Text(p => p.Description));
+        await products.Indexes.CreateOneAsync(
+            new Microsoft.EntityFrameworkCore.MongoDB.IndexKeysDefinitionBuilder<Product>()
+                .Text(p => p.Name)
+                .Text(p => p.Description)
+        );
     }
 
     public Task Down(ApplicationDbContext context)

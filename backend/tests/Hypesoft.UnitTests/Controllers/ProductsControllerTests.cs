@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Ardalis.Result;
 using Hypesoft.API.Controllers;
 using Hypesoft.Application.Commands;
+using Hypesoft.Application.Common.Interfaces;
 using Hypesoft.Application.DTOs;
 using Hypesoft.Application.Queries;
 using MediatR;
@@ -12,7 +13,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Hypesoft.Application.Common.Interfaces;
 using Xunit;
 
 namespace Hypesoft.UnitTests.Controllers
@@ -39,12 +39,13 @@ namespace Hypesoft.UnitTests.Controllers
             var products = new List<ProductDto>
             {
                 new() { Id = Guid.NewGuid(), Name = "Product 1" },
-                new() { Id = Guid.NewGuid(), Name = "Product 2" }
+                new() { Id = Guid.NewGuid(), Name = "Product 2" },
             };
             var paginatedResult = new PaginatedList<ProductDto>(products, 2, 1, 10);
             var result = Result<PaginatedList<ProductDto>>.Success(paginatedResult);
-            
-            _mediatorMock.Setup(m => m.Send(It.IsAny<GetAllProductsQuery>(), It.IsAny<CancellationToken>()))
+
+            _mediatorMock
+                .Setup(m => m.Send(It.IsAny<GetAllProductsQuery>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(result);
 
             // Act
@@ -60,7 +61,8 @@ namespace Hypesoft.UnitTests.Controllers
         public async Task GetAll_WithException_ReturnsInternalServerError()
         {
             // Arrange
-            _mediatorMock.Setup(m => m.Send(It.IsAny<GetAllProductsQuery>(), It.IsAny<CancellationToken>()))
+            _mediatorMock
+                .Setup(m => m.Send(It.IsAny<GetAllProductsQuery>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("Database error"));
 
             // Act
@@ -82,8 +84,14 @@ namespace Hypesoft.UnitTests.Controllers
             var productId = Guid.NewGuid();
             var product = new ProductDto { Id = productId, Name = "Test Product" };
             var result = Result<ProductDto>.Success(product);
-            
-            _mediatorMock.Setup(m => m.Send(It.Is<GetProductByIdQuery>(q => q.Id == productId), It.IsAny<CancellationToken>()))
+
+            _mediatorMock
+                .Setup(m =>
+                    m.Send(
+                        It.Is<GetProductByIdQuery>(q => q.Id == productId),
+                        It.IsAny<CancellationToken>()
+                    )
+                )
                 .ReturnsAsync(result);
 
             // Act
@@ -101,8 +109,9 @@ namespace Hypesoft.UnitTests.Controllers
             // Arrange
             var productId = Guid.NewGuid();
             var result = Result<ProductDto>.NotFound();
-            
-            _mediatorMock.Setup(m => m.Send(It.IsAny<GetProductByIdQuery>(), It.IsAny<CancellationToken>()))
+
+            _mediatorMock
+                .Setup(m => m.Send(It.IsAny<GetProductByIdQuery>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(result);
 
             // Act
@@ -122,10 +131,16 @@ namespace Hypesoft.UnitTests.Controllers
             // Arrange
             var command = new CreateProductCommand { Name = "New Product", Price = 9.99m };
             var productId = Guid.NewGuid();
-            var productDto = new ProductDto { Id = productId, Name = command.Name, Price = command.Price };
+            var productDto = new ProductDto
+            {
+                Id = productId,
+                Name = command.Name,
+                Price = command.Price,
+            };
             var result = Result<ProductDto>.Success(productDto);
-            
-            _mediatorMock.Setup(m => m.Send(It.IsAny<CreateProductCommand>(), It.IsAny<CancellationToken>()))
+
+            _mediatorMock
+                .Setup(m => m.Send(It.IsAny<CreateProductCommand>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(result);
 
             // Act
@@ -144,11 +159,12 @@ namespace Hypesoft.UnitTests.Controllers
             var command = new CreateProductCommand { Name = "" }; // Nome inválido
             var validationErrors = new List<ValidationError>
             {
-                new ValidationError("Name", "Name is required")
+                new ValidationError("Name", "Name is required"),
             };
             var result = Result<ProductDto>.Invalid(validationErrors);
-            
-            _mediatorMock.Setup(m => m.Send(It.IsAny<CreateProductCommand>(), It.IsAny<CancellationToken>()))
+
+            _mediatorMock
+                .Setup(m => m.Send(It.IsAny<CreateProductCommand>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(result);
 
             // Act

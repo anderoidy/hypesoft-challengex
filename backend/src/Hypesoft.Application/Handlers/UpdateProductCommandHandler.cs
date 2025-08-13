@@ -1,3 +1,6 @@
+using System.ComponentModel.DataAnnotations;
+using System.Data;
+using System.Text.Json;
 using Ardalis.Result;
 using AutoMapper;
 using Hypesoft.Application.Commands;
@@ -6,9 +9,6 @@ using Hypesoft.Application.DTOs;
 using Hypesoft.Domain.Entities;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
-using System.Data;
 
 namespace Hypesoft.Application.Handlers;
 
@@ -21,14 +21,18 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
     public UpdateProductCommandHandler(
         IApplicationUnitOfWork uow,
         IMapper mapper,
-        ILogger<UpdateProductCommandHandler> logger)
+        ILogger<UpdateProductCommandHandler> logger
+    )
     {
         _uow = uow ?? throw new ArgumentNullException(nameof(uow));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<Result<ProductDto>> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
+    public async Task<Result<ProductDto>> Handle(
+        UpdateProductCommand request,
+        CancellationToken cancellationToken
+    )
     {
         try
         {
@@ -38,12 +42,17 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
             if (!Validator.TryValidateObject(request, validationContext, validationResults, true))
             {
                 var errors = validationResults
-                    .Select(r => new ValidationError(r.MemberNames.FirstOrDefault() ?? "Unknown", r.ErrorMessage ?? "Validation error"))
+                    .Select(r => new ValidationError(
+                        r.MemberNames.FirstOrDefault() ?? "Unknown",
+                        r.ErrorMessage ?? "Validation error"
+                    ))
                     .ToList();
-                
-                _logger.LogWarning("Validation failed for UpdateProductCommand: {Errors}", 
-                    JsonSerializer.Serialize(errors));
-                    
+
+                _logger.LogWarning(
+                    "Validation failed for UpdateProductCommand: {Errors}",
+                    JsonSerializer.Serialize(errors)
+                );
+
                 return Result.Invalid(errors);
             }
 
@@ -58,10 +67,16 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
             // Check if category exists if it's being updated
             if (request.CategoryId != product.CategoryId)
             {
-                var categoryExists = await _uow.Categories.ExistsAsync(c => c.Id == request.CategoryId, cancellationToken);
+                var categoryExists = await _uow.Categories.ExistsAsync(
+                    c => c.Id == request.CategoryId,
+                    cancellationToken
+                );
                 if (!categoryExists)
                 {
-                    _logger.LogWarning("Category with ID {CategoryId} not found", request.CategoryId);
+                    _logger.LogWarning(
+                        "Category with ID {CategoryId} not found",
+                        request.CategoryId
+                    );
                     return Result.NotFound($"Category with ID {request.CategoryId} not found");
                 }
             }
@@ -76,15 +91,21 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
                 request.StockQuantity,
                 request.DiscountPrice,
                 request.IsFeatured,
-                request.UserId);
+                request.UserId
+            );
 
             // Save changes
             await _uow.SaveChangesAsync(cancellationToken);
 
             // Map to DTO using AutoMapper with the CategoryName from context
-            var category = await _uow.Categories.GetByIdAsync(product.CategoryId, cancellationToken);
-            var productDto = _mapper.Map<ProductDto>(product, opts => 
-                opts.Items["CategoryName"] = category?.Name);
+            var category = await _uow.Categories.GetByIdAsync(
+                product.CategoryId,
+                cancellationToken
+            );
+            var productDto = _mapper.Map<ProductDto>(
+                product,
+                opts => opts.Items["CategoryName"] = category?.Name
+            );
 
             _logger.LogInformation("Updated product with ID {ProductId}", product.Id);
             return Result.Success(productDto);
@@ -92,7 +113,9 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
         catch (DBConcurrencyException ex)
         {
             _logger.LogWarning(ex, "Concurrency error updating product: {Message}", ex.Message);
-            return Result.Error("A concurrency error occurred while updating the product. Please refresh and try again.");
+            return Result.Error(
+                "A concurrency error occurred while updating the product. Please refresh and try again."
+            );
         }
         catch (Exception ex)
         {

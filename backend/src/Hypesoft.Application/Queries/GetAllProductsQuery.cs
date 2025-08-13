@@ -1,7 +1,7 @@
 using Ardalis.Result;
+using Hypesoft.Application.Common.Models;
 using Hypesoft.Application.DTOs;
 using MediatR;
-using Hypesoft.Application.Common.Models;
 
 namespace Hypesoft.Application.Queries;
 
@@ -14,12 +14,12 @@ public class GetAllProductsQuery : IRequest<Result<PaginatedList<ProductDto>>>
     /// Termo de busca opcional para filtrar produtos por nome ou descrição
     /// </summary>
     public string? SearchTerm { get; }
-    
+
     /// <summary>
     /// Número da página (baseado em 1)
     /// </summary>
     public int PageNumber { get; }
-    
+
     /// <summary>
     /// Número de itens por página
     /// </summary>
@@ -31,10 +31,7 @@ public class GetAllProductsQuery : IRequest<Result<PaginatedList<ProductDto>>>
     /// <param name="searchTerm">Termo de busca opcional</param>
     /// <param name="pageNumber">Número da página (baseado em 1)</param>
     /// <param name="pageSize">Número de itens por página</param>
-    public GetAllProductsQuery(
-        string? searchTerm = null,
-        int pageNumber = 1,
-        int pageSize = 10)
+    public GetAllProductsQuery(string? searchTerm = null, int pageNumber = 1, int pageSize = 10)
     {
         SearchTerm = searchTerm;
         PageNumber = pageNumber;

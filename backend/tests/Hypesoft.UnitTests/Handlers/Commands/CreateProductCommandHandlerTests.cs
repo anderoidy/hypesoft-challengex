@@ -5,6 +5,7 @@ using Ardalis.Result;
 using AutoMapper;
 using FluentAssertions;
 using Hypesoft.Application.Commands;
+using Hypesoft.Application.Common.Interfaces;
 using Hypesoft.Application.Handlers;
 using Hypesoft.Application.UnitTests.TestData;
 using Hypesoft.Domain.Entities;
@@ -12,7 +13,6 @@ using Hypesoft.Domain.Repositories;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using Hypesoft.Application.Common.Interfaces;
 
 namespace Hypesoft.Application.UnitTests.Handlers.Commands;
 
@@ -28,11 +28,12 @@ public class CreateProductCommandHandlerTests
         _mockUnitOfWork = new Mock<IApplicationUnitOfWork>();
         _mockMapper = new Mock<IMapper>();
         _mockLogger = new Mock<ILogger<CreateProductCommandHandler>>();
-        
+
         _handler = new CreateProductCommandHandler(
-            _mockUnitOfWork.Object, 
-            _mockMapper.Object, 
-            _mockLogger.Object);
+            _mockUnitOfWork.Object,
+            _mockMapper.Object,
+            _mockLogger.Object
+        );
     }
 
     [Fact]
@@ -42,20 +43,29 @@ public class CreateProductCommandHandlerTests
         var command = ProductTestData.CreateValidCreateProductCommand();
         var category = ProductTestData.CreateValidCategory();
         var product = ProductTestData.CreateValidProduct();
-        
-        _mockUnitOfWork.Setup(u => u.Products.IsSkuUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+
+        _mockUnitOfWork
+            .Setup(u =>
+                u.Products.IsSkuUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())
+            )
             .ReturnsAsync(true);
-            
-        _mockUnitOfWork.Setup(u => u.Products.IsBarcodeUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+
+        _mockUnitOfWork
+            .Setup(u =>
+                u.Products.IsBarcodeUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())
+            )
             .ReturnsAsync(true);
-            
-        _mockUnitOfWork.Setup(u => u.Categories.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+
+        _mockUnitOfWork
+            .Setup(u => u.Categories.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(category);
-            
-        _mockUnitOfWork.Setup(u => u.Products.AddAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()))
+
+        _mockUnitOfWork
+            .Setup(u => u.Products.AddAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-            
-        _mockUnitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+
+        _mockUnitOfWork
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
@@ -64,8 +74,11 @@ public class CreateProductCommandHandlerTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeEmpty();
-        
-        _mockUnitOfWork.Verify(u => u.Products.AddAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        _mockUnitOfWork.Verify(
+            u => u.Products.AddAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
+            Times.Once
+        );
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -74,8 +87,11 @@ public class CreateProductCommandHandlerTests
     {
         // Arrange
         var command = ProductTestData.CreateValidCreateProductCommand();
-        
-        _mockUnitOfWork.Setup(u => u.Products.IsSkuUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+
+        _mockUnitOfWork
+            .Setup(u =>
+                u.Products.IsSkuUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())
+            )
             .ReturnsAsync(false);
 
         // Act
@@ -84,8 +100,11 @@ public class CreateProductCommandHandlerTests
         // Assert
         result.IsSuccess.Should().BeFalse();
         result.ValidationErrors.Should().Contain(e => e.ErrorMessage == "SKU já existe.");
-        
-        _mockUnitOfWork.Verify(u => u.Products.AddAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        _mockUnitOfWork.Verify(
+            u => u.Products.AddAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
+            Times.Never
+        );
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -94,11 +113,17 @@ public class CreateProductCommandHandlerTests
     {
         // Arrange
         var command = ProductTestData.CreateValidCreateProductCommand();
-        
-        _mockUnitOfWork.Setup(u => u.Products.IsSkuUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+
+        _mockUnitOfWork
+            .Setup(u =>
+                u.Products.IsSkuUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())
+            )
             .ReturnsAsync(true);
-            
-        _mockUnitOfWork.Setup(u => u.Products.IsBarcodeUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+
+        _mockUnitOfWork
+            .Setup(u =>
+                u.Products.IsBarcodeUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())
+            )
             .ReturnsAsync(false);
 
         // Act
@@ -106,9 +131,14 @@ public class CreateProductCommandHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeFalse();
-        result.ValidationErrors.Should().Contain(e => e.ErrorMessage == "Código de barras já existe.");
-        
-        _mockUnitOfWork.Verify(u => u.Products.AddAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()), Times.Never);
+        result
+            .ValidationErrors.Should()
+            .Contain(e => e.ErrorMessage == "Código de barras já existe.");
+
+        _mockUnitOfWork.Verify(
+            u => u.Products.AddAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
+            Times.Never
+        );
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -117,14 +147,21 @@ public class CreateProductCommandHandlerTests
     {
         // Arrange
         var command = ProductTestData.CreateValidCreateProductCommand();
-        
-        _mockUnitOfWork.Setup(u => u.Products.IsSkuUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+
+        _mockUnitOfWork
+            .Setup(u =>
+                u.Products.IsSkuUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())
+            )
             .ReturnsAsync(true);
-            
-        _mockUnitOfWork.Setup(u => u.Products.IsBarcodeUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+
+        _mockUnitOfWork
+            .Setup(u =>
+                u.Products.IsBarcodeUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())
+            )
             .ReturnsAsync(true);
-            
-        _mockUnitOfWork.Setup(u => u.Categories.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+
+        _mockUnitOfWork
+            .Setup(u => u.Categories.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Category)null);
 
         // Act
@@ -132,9 +169,14 @@ public class CreateProductCommandHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeFalse();
-        result.ValidationErrors.Should().Contain(e => e.ErrorMessage == "Categoria não encontrada.");
-        
-        _mockUnitOfWork.Verify(u => u.Products.AddAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()), Times.Never);
+        result
+            .ValidationErrors.Should()
+            .Contain(e => e.ErrorMessage == "Categoria não encontrada.");
+
+        _mockUnitOfWork.Verify(
+            u => u.Products.AddAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
+            Times.Never
+        );
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -144,8 +186,11 @@ public class CreateProductCommandHandlerTests
         // Arrange
         var command = ProductTestData.CreateValidCreateProductCommand();
         var exception = new Exception("Database error");
-        
-        _mockUnitOfWork.Setup(u => u.Products.IsSkuUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+
+        _mockUnitOfWork
+            .Setup(u =>
+                u.Products.IsSkuUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())
+            )
             .ThrowsAsync(exception);
 
         // Act
@@ -154,15 +199,18 @@ public class CreateProductCommandHandlerTests
         // Assert
         result.IsSuccess.Should().BeFalse();
         result.Errors.Should().Contain("Erro inesperado ao criar produto.");
-        
+
         // Verifica se o erro foi logado
         _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Erro ao criar produto")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-            Times.Once);
+            x =>
+                x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Erro ao criar produto")),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception, string>>()
+                ),
+            Times.Once
+        );
     }
 }

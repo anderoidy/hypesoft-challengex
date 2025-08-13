@@ -1,9 +1,9 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Hypesoft.Domain.Entities;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Hypesoft.Domain.Entities;
 
 namespace Hypesoft.Infrastructure.Auth;
 
@@ -25,7 +25,10 @@ public class JwtService : IJwtService
     public string GenerateToken(ApplicationUser user, IList<string> roles)
     {
         if (string.IsNullOrEmpty(_jwtSettings.Secret))
-            throw new ArgumentNullException(nameof(_jwtSettings.Secret), "JWT Secret is not configured");
+            throw new ArgumentNullException(
+                nameof(_jwtSettings.Secret),
+                "JWT Secret is not configured"
+            );
 
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_jwtSettings.Secret);
@@ -35,7 +38,7 @@ public class JwtService : IJwtService
             new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Email, user.Email ?? string.Empty),
             new(ClaimTypes.Name, user.UserName ?? string.Empty),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
 
         // Add roles as multiple claims
@@ -51,8 +54,9 @@ public class JwtService : IJwtService
             Issuer = _jwtSettings.Issuer,
             Audience = _jwtSettings.Audience,
             SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key), 
-                SecurityAlgorithms.HmacSha256Signature)
+                new SymmetricSecurityKey(key),
+                SecurityAlgorithms.HmacSha256Signature
+            ),
         };
 
         var token = tokenHandler.CreateToken(tokenDescriptor);
@@ -62,24 +66,31 @@ public class JwtService : IJwtService
     public ClaimsPrincipal? ValidateToken(string token)
     {
         if (string.IsNullOrEmpty(_jwtSettings.Secret))
-            throw new ArgumentNullException(nameof(_jwtSettings.Secret), "JWT Secret is not configured");
+            throw new ArgumentNullException(
+                nameof(_jwtSettings.Secret),
+                "JWT Secret is not configured"
+            );
 
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_jwtSettings.Secret);
 
         try
         {
-            var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidateIssuer = true,
-                ValidIssuer = _jwtSettings.Issuer,
-                ValidateAudience = true,
-                ValidAudience = _jwtSettings.Audience,
-                ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero
-            }, out _);
+            var principal = tokenHandler.ValidateToken(
+                token,
+                new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = true,
+                    ValidIssuer = _jwtSettings.Issuer,
+                    ValidateAudience = true,
+                    ValidAudience = _jwtSettings.Audience,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero,
+                },
+                out _
+            );
 
             return principal;
         }
