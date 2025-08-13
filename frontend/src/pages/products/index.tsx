@@ -3,6 +3,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,10 +41,10 @@ const products = [
 ];
 
 const statusStyles = {
-  in_stock: { text: 'Em Estoque', class: 'bg-green-100 text-green-800' },
-  low_stock: { text: 'Estoque Baixo', class: 'bg-yellow-100 text-yellow-800' },
-  out_of_stock: { text: 'Sem Estoque', class: 'bg-red-100 text-red-800' },
-};
+  in_stock: { text: 'Em estoque', class: 'bg-green-100 text-green-800' },
+  low_stock: { text: 'Estoque baixo', class: 'bg-yellow-100 text-yellow-800' },
+  out_of_stock: { text: 'Sem estoque', class: 'bg-red-100 text-red-800' }
+} as const;
 
 export default function ProductsPage() {
   return (
