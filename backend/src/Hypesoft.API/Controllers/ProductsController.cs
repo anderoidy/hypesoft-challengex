@@ -2,7 +2,10 @@ using System;
 using System.Threading.Tasks;
 using Ardalis.Result;
 using Hypesoft.Application.Commands;
+using Hypesoft.Application.Commands.Products;
 using Hypesoft.Application.Queries;
+using Hypesoft.Application.Queries.Categories;
+using Hypesoft.Application.Queries.Products;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -39,7 +42,8 @@ namespace Hypesoft.API.Controllers
         public async Task<IActionResult> GetAll(
             [FromQuery] string? search = null,
             [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10)
+            [FromQuery] int pageSize = 10
+        )
         {
             try
             {
@@ -49,14 +53,15 @@ namespace Hypesoft.API.Controllers
                 var query = new GetAllProductsQuery(search, pageNumber, pageSize);
                 var result = await _mediator.Send(query);
 
-                return result.Status == ResultStatus.NotFound 
-                    ? NotFound() 
-                    : Ok(result);
+                return result.Status == ResultStatus.NotFound ? NotFound() : Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao buscar produtos");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao buscar os produtos");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Ocorreu um erro ao buscar os produtos"
+                );
             }
         }
 
@@ -75,14 +80,15 @@ namespace Hypesoft.API.Controllers
                 var query = new GetProductByIdQuery(id);
                 var result = await _mediator.Send(query);
 
-                return result.Status == ResultStatus.NotFound 
-                    ? NotFound() 
-                    : Ok(result);
+                return result.Status == ResultStatus.NotFound ? NotFound() : Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao buscar produto com ID {ProductId}", id);
-                return StatusCode(StatusCodes.Status500InternalServerError, $"Ocorreu um erro ao buscar o produto com ID {id}");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    $"Ocorreu um erro ao buscar o produto com ID {id}"
+                );
             }
         }
 
@@ -110,12 +116,19 @@ namespace Hypesoft.API.Controllers
                 if (result.Status == ResultStatus.NotFound)
                     return NotFound("Categoria não encontrada");
 
-                return CreatedAtAction(nameof(GetById), new { id = result.Value }, new { id = result.Value });
+                return CreatedAtAction(
+                    nameof(GetById),
+                    new { id = result.Value },
+                    new { id = result.Value }
+                );
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao criar produto");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao criar o produto");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Ocorreu um erro ao criar o produto"
+                );
             }
         }
 
@@ -153,7 +166,10 @@ namespace Hypesoft.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao atualizar produto com ID {ProductId}", id);
-                return StatusCode(StatusCodes.Status500InternalServerError, $"Ocorreu um erro ao atualizar o produto com ID {id}");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    $"Ocorreu um erro ao atualizar o produto com ID {id}"
+                );
             }
         }
 
@@ -181,7 +197,10 @@ namespace Hypesoft.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao remover produto com ID {ProductId}", id);
-                return StatusCode(StatusCodes.Status500InternalServerError, $"Ocorreu um erro ao remover o produto com ID {id}");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    $"Ocorreu um erro ao remover o produto com ID {id}"
+                );
             }
         }
     }

@@ -4,29 +4,29 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
   <ItemGroup>
-    <ProjectReference Include="..\Hypesoft.Application\Hypesoft.Application.csproj" />
     <ProjectReference Include="..\Hypesoft.Domain\Hypesoft.Domain.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Ardalis.Result" Version="10.1.0" />
-    <PackageReference Include="Ardalis.Specification.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="Ardalis.Specification.EntityFrameworkCore" Version="9.2.0" />
     <PackageReference Include="Ardalis.Result.AspNetCore" Version="10.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.8" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.8" />    
-    <PackageReference Include="MongoDB.Driver" Version="3.0.0" /> 
-    <PackageReference Include="MongoDB.EntityFrameworkCore" Version="8.2.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8" />
     <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.0.1" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.8" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.9.0" />
+    <PackageReference Include="Ardalis.Specification" Version="9.2.0" />
+    <!-- MongoDB EF Provider se ainda estiver usando -->
+    <PackageReference Include="MongoDB.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="MediatR" Version="12.4.1" />
   </ItemGroup>
-
   <ItemGroup>
     <Compile Update="Persistence\ApplicationDbContext.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

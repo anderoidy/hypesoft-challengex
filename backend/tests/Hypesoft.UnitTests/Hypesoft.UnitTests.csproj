@@ -5,38 +5,27 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
-
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Hypesoft.API\Hypesoft.API.csproj" />
-    <ProjectReference Include="..\..\src\Hypesoft.Application\Hypesoft.Application.csproj" />
-    <ProjectReference Include="..\..\src\Hypesoft.Infrastructure\Hypesoft.Infrastructure.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Ardalis.Result" Version="10.1.0" />
-    <PackageReference Include="Ardalis.Specification" Version="9.2.0" />
-    <PackageReference Include="Ardalis.Specification.EntityFrameworkCore" Version="9.0.0" />
-    <PackageReference Include="Ardalis.Result.AspNetCore" Version="10.0.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
-    <PackageReference Include="xunit" Version="2.9.2" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
+    <PackageReference Include="xunit" Version="2.6.6" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.6">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="coverlet.collector" Version="6.0.2">
+    <PackageReference Include="coverlet.collector" Version="6.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="FluentAssertions" Version="6.12.0" />
     <PackageReference Include="Moq" Version="4.20.70" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.8" />
+    <PackageReference Include="AutoFixture" Version="4.18.1" />
+    <PackageReference Include="AutoFixture.Xunit2" Version="4.18.1" />
+    <PackageReference Include="FluentAssertions" Version="6.12.0" />
   </ItemGroup>
-
+  <!-- ✅ ADICIONE ESTAS REFERÊNCIAS DOS PROJETOS -->
   <ItemGroup>
-    <Using Include="Xunit" />
-    <Using Include="Xunit.Abstractions" />
-    <Using Include="Moq" />
-    <Using Include="FluentAssertions" />
+    <ProjectReference Include="..\..\src\Hypesoft.Domain\Hypesoft.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Hypesoft.Application\Hypesoft.Application.csproj" />
+    <ProjectReference Include="..\..\src\Hypesoft.API\Hypesoft.API.csproj" />
+    <ProjectReference Include="..\..\src\Hypesoft.Infrastructure\Hypesoft.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

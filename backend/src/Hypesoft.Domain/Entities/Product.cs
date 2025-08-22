@@ -2,29 +2,30 @@ using System.ComponentModel.DataAnnotations;
 using Hypesoft.Domain.Common;
 using Hypesoft.Domain.Common.Interfaces;
 using Hypesoft.Domain.Exceptions;
+using Hypesoft.Domain.Interfaces;
 
 namespace Hypesoft.Domain.Entities;
 
 public class Product : BaseEntity, IAggregateRoot
 {
     // Properties with private setters for encapsulation
-    public string Name { get; private set; } = string.Empty;
-    public string? Description { get; private set; }
-    public string? ImageUrl { get; private set; }
-    public decimal Price { get; private set; }
-    public decimal? DiscountPrice { get; private set; }
-    public int StockQuantity { get; private set; }
-    public string? Sku { get; private set; }
-    public string? Barcode { get; private set; }
-    public bool IsFeatured { get; private set; }
-    public bool IsPublished { get; private set; }
-    public DateTime? PublishedAt { get; private set; }
-    public string? Slug { get; private set; }
-    public DateTime? UpdatedAt { get; private set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? ImageUrl { get; set; }
+    public decimal Price { get; set; }
+    public decimal? DiscountPrice { get; set; }
+    public int StockQuantity { get; set; }
+    public string? Sku { get; set; }
+    public string? Barcode { get; set; }
+    public bool IsFeatured { get; set; }
+    public bool IsPublished { get; set; }
+    public DateTime? PublishedAt { get; set; }
+    public string? Slug { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
     // Navigation properties
-    public Guid CategoryId { get; private set; }
-    public virtual Category? Category { get; private set; }
+    public Guid CategoryId { get; set; }
+    public virtual Category? Category { get; set; }
 
     protected Product() { } // For EF Core
 
@@ -55,9 +56,11 @@ public class Product : BaseEntity, IAggregateRoot
         SetIsFeatured(isFeatured);
         SetIsPublished(isPublished);
 
+        // ✅ CORREÇÃO: Verificar se slug não é null antes de chamar SetSlug
         if (!string.IsNullOrEmpty(name))
         {
-            SetSlug(slug ?? GenerateSlug(name));
+            var slugToUse = slug ?? GenerateSlug(name);
+            SetSlug(slugToUse);
         }
         else if (!string.IsNullOrEmpty(slug))
         {
@@ -234,7 +237,12 @@ public class Product : BaseEntity, IAggregateRoot
         SetImageUrl(imageUrl);
         SetStockQuantity(stockQuantity);
         SetDiscountPrice(discountPrice);
-        SetSlug(slug);
+
+        // ✅ CORREÇÃO: Verificar se slug não é null
+        if (!string.IsNullOrEmpty(slug))
+        {
+            SetSlug(slug);
+        }
 
         if (isFeatured.HasValue)
         {

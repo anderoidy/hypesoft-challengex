@@ -1,5 +1,6 @@
-using Hypesoft.Application.Commands;
 using FluentValidation;
+using Hypesoft.Application.Commands;
+using Hypesoft.Application.Commands.Products;
 
 namespace Hypesoft.Application.Validators;
 
@@ -7,23 +8,16 @@ public class CreateProductCommandValidator : AbstractValidator<CreateProductComm
 {
     public CreateProductCommandValidator()
     {
-        RuleFor(x => x.Name)
-            .NotEmpty()
-            .MaximumLength(100);
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
 
-        RuleFor(x => x.Price)
-            .GreaterThan(0);
+        RuleFor(x => x.Price).GreaterThan(0);
 
-        RuleFor(x => x.CategoryId)
-            .NotEmpty();
+        RuleFor(x => x.CategoryId).NotEmpty();
 
-        RuleFor(x => x.StockQuantity)
-            .GreaterThanOrEqualTo(0);
+        RuleFor(x => x.StockQuantity).GreaterThanOrEqualTo(0);
 
-        RuleFor(x => x.Sku)
-            .MaximumLength(50);
+        RuleFor(x => x.Sku).MaximumLength(50);
 
-        RuleFor(x => x.Barcode)
-            .MaximumLength(50);
+        RuleFor(x => x.Barcode).MaximumLength(50);
     }
 }

@@ -1,5 +1,6 @@
 using Hypesoft.Domain.Common;
 using Hypesoft.Domain.Common.Interfaces;
+using Hypesoft.Domain.Interfaces;
 
 namespace Hypesoft.Domain.Entities;
 
@@ -11,11 +12,12 @@ public class Category : BaseEntity, IAggregateRoot
     public bool IsMainCategory { get; private set; }
     public string? Slug { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
-    
+
     // Navigation properties
     public Guid? ParentCategoryId { get; private set; }
     public virtual Category? ParentCategory { get; private set; }
-    public virtual ICollection<Category> ChildCategories { get; private set; } = new List<Category>();
+    public virtual ICollection<Category> ChildCategories { get; private set; } =
+        new List<Category>();
     public virtual ICollection<Category> SubCategories { get; private set; } = new List<Category>();
     public virtual ICollection<Product> Products { get; private set; } = new List<Product>();
 
@@ -25,9 +27,31 @@ public class Category : BaseEntity, IAggregateRoot
         UpdatedAt = updatedAt;
     }
 
+    //Metodo da correcao X
+    public void ChangeParent(Guid? newParentId, string? userId = null)
+    {
+        if (ParentCategoryId == newParentId)
+            return; // Já está no pai correto
+
+        ParentCategoryId = newParentId;
+        IsMainCategory = !newParentId.HasValue;
+
+        if (!string.IsNullOrEmpty(userId))
+            UpdateAuditFields(userId);
+        else
+            UpdatedAt = DateTime.UtcNow;
+    }
+
     protected Category() { } // Private constructor for EF Core
 
-    public Category(string name, string? description = null, string? imageUrl = null, bool isMainCategory = true, Guid? parentCategoryId = null, string? slug = null)
+    public Category(
+        string name,
+        string? description = null,
+        string? imageUrl = null,
+        bool isMainCategory = true,
+        Guid? parentCategoryId = null,
+        string? slug = null
+    )
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("O nome da categoria não pode ser vazio", nameof(name));
@@ -48,42 +72,48 @@ public class Category : BaseEntity, IAggregateRoot
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Update(string name, string? description = null, string? imageUrl = null, string? userId = null, string? slug = null)
+    public void Update(
+        string name,
+        string? description = null,
+        string? imageUrl = null,
+        string? userId = null,
+        string? slug = null
+    )
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("O nome da categoria não pode ser vazio", nameof(name));
 
         Name = name.Trim();
         Description = description?.Trim();
-        
+
         if (!string.IsNullOrEmpty(imageUrl))
             ImageUrl = imageUrl;
-            
+
         if (!string.IsNullOrEmpty(slug))
             SetSlug(slug);
 
         if (!string.IsNullOrEmpty(userId))
             UpdateAuditFields(userId);
-            
+
         UpdatedAt = DateTime.UtcNow;
     }
-    
+
     public void SetSlug(string slug)
     {
         Slug = string.IsNullOrWhiteSpace(slug) ? GenerateSlug(Name) : slug.Trim().ToLower();
         UpdatedAt = DateTime.UtcNow;
     }
-    
+
     private string GenerateSlug(string name)
     {
         if (string.IsNullOrEmpty(name))
             return string.Empty;
-            
+
         return name.ToLower()
-                 .Replace(" ", "-")
-                 .Replace("&", "and")
-                 .Replace("#", "sharp")
-                 .Replace("+", "plus");
+            .Replace(" ", "-")
+            .Replace("&", "and")
+            .Replace("#", "sharp")
+            .Replace("+", "plus");
     }
 
     public void AddSubCategory(Category subCategory, string? userId = null)
@@ -92,7 +122,9 @@ public class Category : BaseEntity, IAggregateRoot
             throw new ArgumentNullException(nameof(subCategory));
 
         if (subCategory.Id == Id)
-            throw new InvalidOperationException("Uma categoria não pode ser subcategoria de si mesma");
+            throw new InvalidOperationException(
+                "Uma categoria não pode ser subcategoria de si mesma"
+            );
 
         if (subCategory.ParentCategoryId == Id)
             return; // Já é uma subcategoria desta categoria
@@ -104,10 +136,10 @@ public class Category : BaseEntity, IAggregateRoot
         subCategory.ParentCategoryId = Id;
         subCategory.ParentCategory = this;
         subCategory.IsMainCategory = false;
-        
+
         if (!string.IsNullOrEmpty(userId))
             subCategory.UpdateAuditFields(userId);
-            
+
         SubCategories.Add(subCategory);
     }
 
@@ -122,10 +154,10 @@ public class Category : BaseEntity, IAggregateRoot
         subCategory.ParentCategoryId = null;
         subCategory.ParentCategory = null;
         subCategory.IsMainCategory = true;
-        
+
         if (!string.IsNullOrEmpty(userId))
             subCategory.UpdateAuditFields(userId);
-            
+
         SubCategories.Remove(subCategory);
     }
 
@@ -135,10 +167,12 @@ public class Category : BaseEntity, IAggregateRoot
             return;
 
         if (!isMain && ParentCategoryId == null)
-            throw new InvalidOperationException("Uma categoria raiz deve ser uma categoria principal");
+            throw new InvalidOperationException(
+                "Uma categoria raiz deve ser uma categoria principal"
+            );
 
         IsMainCategory = isMain;
-        
+
         if (!string.IsNullOrEmpty(userId))
             UpdateAuditFields(userId);
     }
@@ -149,7 +183,7 @@ public class Category : BaseEntity, IAggregateRoot
             throw new ArgumentException("A URL da imagem não pode ser vazia", nameof(imageUrl));
 
         ImageUrl = imageUrl;
-        
+
         if (!string.IsNullOrEmpty(userId))
             UpdateAuditFields(userId);
     }

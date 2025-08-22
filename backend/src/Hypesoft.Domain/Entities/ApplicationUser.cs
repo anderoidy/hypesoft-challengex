@@ -1,12 +1,32 @@
 using System;
 using System.Collections.Generic;
 using Hypesoft.Domain.Common.Interfaces;
-using Microsoft.AspNetCore.Identity;
+using Hypesoft.Domain.Interfaces;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace Hypesoft.Domain.Entities
 {
-    public class ApplicationUser : IdentityUser<Guid>, IEntity
+    [BsonIgnoreExtraElements]
+    public class ApplicationUser : IEntity<Guid>
     {
+        [BsonId]
+        public Guid Id { get; set; } = Guid.NewGuid();
+
+        public string? UserName { get; set; }
+        public string? NormalizedUserName { get; set; }
+        public string? Email { get; set; }
+        public string? NormalizedEmail { get; set; }
+        public bool EmailConfirmed { get; set; }
+        public string? PasswordHash { get; set; }
+        public string? SecurityStamp { get; set; }
+        public string? ConcurrencyStamp { get; set; } = Guid.NewGuid().ToString();
+        public string? PhoneNumber { get; set; }
+        public bool PhoneNumberConfirmed { get; set; }
+        public bool TwoFactorEnabled { get; set; }
+        public DateTimeOffset? LockoutEnd { get; set; }
+        public bool LockoutEnabled { get; set; }
+        public int AccessFailedCount { get; set; }
+
         // ApplicationUser specific properties
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
@@ -19,14 +39,12 @@ namespace Hypesoft.Domain.Entities
         public bool IsDeleted { get; private set; }
 
         // Navigation properties
-        public virtual ICollection<ApplicationUserRole> UserRoles { get; set; } =
+        [BsonElement("UserRoles")]
+        public ICollection<string> RoleIds { get; set; } = new List<string>();
+
+        [BsonIgnore]
+        public ICollection<ApplicationUserRole> UserRoles { get; set; } =
             new List<ApplicationUserRole>();
-        public virtual ICollection<IdentityUserClaim<Guid>> Claims { get; set; } =
-            new List<IdentityUserClaim<Guid>>();
-        public virtual ICollection<IdentityUserLogin<Guid>> Logins { get; set; } =
-            new List<IdentityUserLogin<Guid>>();
-        public virtual ICollection<IdentityUserToken<Guid>> Tokens { get; set; } =
-            new List<IdentityUserToken<Guid>>();
 
         // Audit methods
         public void SetUpdatedAt(DateTime updatedAt)

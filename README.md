@@ -18,7 +18,7 @@ Antes de começar, instale:
 
 * **Frontend**
 
-  * [Node.js 18+](https://nodejs.org/en/)
+  * [Node.js 18+](https://nodejs.org/en/)done
   * npm 9+ ou yarn 1.22+
 
 ---

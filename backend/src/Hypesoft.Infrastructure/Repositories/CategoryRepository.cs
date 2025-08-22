@@ -4,24 +4,21 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Ardalis.Specification;
+using Ardalis.Specification.EntityFrameworkCore;
 using Hypesoft.Domain.Common;
 using Hypesoft.Domain.Entities;
 using Hypesoft.Domain.Repositories;
-using Hypesoft.Infrastructure.Persistence;
-using MongoDB.Driver;
-using MongoDB.Driver.Linq;
+using Hypesoft.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Hypesoft.Infrastructure.Repositories
 {
-    public class CategoryRepository : RepositoryBase<Category>, ICategoryRepository
+    public class CategoryRepository : BaseRepository<Category>
     {
-        private readonly IMongoCollection<Product> _productCollection;
-
-        public CategoryRepository(ApplicationDbContext context)
-            : base(context, nameof(ApplicationDbContext.Categories))
-        {
-            _productCollection = context.Database.GetCollection<Product>("Products");
-        }
+        public CategoryRepository(ApplicationDbContext context, ILogger logger)
+            : base(context, logger) { }
 
         public async Task<bool> IsNameUniqueAsync(
             string name,
@@ -29,7 +26,12 @@ namespace Hypesoft.Infrastructure.Repositories
             CancellationToken cancellationToken = default
         )
         {
-            return !await ExistsWithNameAsync(name, excludeId, cancellationToken);
+            var query = DbContext.Set<Category>().Where(c => c.Name == name);
+            if (excludeId.HasValue)
+            {
+                query = query.Where(c => c.Id != excludeId.Value);
+            }
+            return !await query.AnyAsync(cancellationToken);
         }
 
         public async Task<Category?> GetBySlugAsync(
@@ -37,9 +39,9 @@ namespace Hypesoft.Infrastructure.Repositories
             CancellationToken cancellationToken = default
         )
         {
-            return await _collection
-                .Find(c => c.Slug == slug)
-                .FirstOrDefaultAsync(cancellationToken);
+            return await DbContext
+                .Set<Category>()
+                .FirstOrDefaultAsync(c => c.Slug == slug, cancellationToken);
         }
 
         public async Task<Category?> GetByIdWithDetailsAsync(
@@ -47,36 +49,21 @@ namespace Hypesoft.Infrastructure.Repositories
             CancellationToken cancellationToken = default
         )
         {
-            var category = await _collection
-                .Find(c => c.Id == id)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (category != null)
-            {
-                // Carrega a categoria pai, se houver
-                if (category.ParentCategoryId.HasValue)
-                {
-                    category.ParentCategory = await _collection
-                        .Find(c => c.Id == category.ParentCategoryId.Value)
-                        .FirstOrDefaultAsync(cancellationToken);
-                }
-
-                // Carrega as categorias filhas
-                category.ChildCategories = await _collection
-                    .Find(c => c.ParentCategoryId == category.Id)
-                    .ToListAsync(cancellationToken);
-            }
-
-            return category;
+            return await DbContext
+                .Set<Category>()
+                .Include(c => c.ParentCategory)
+                .Include(c => c.ChildCategories)
+                .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
         }
 
         public async Task<IReadOnlyList<Category>> GetRootCategoriesAsync(
             CancellationToken cancellationToken = default
         )
         {
-            return await _collection
-                .Find(c => c.ParentCategoryId == null || !c.ParentCategoryId.HasValue)
-                .SortBy(c => c.Name)
+            return await DbContext
+                .Set<Category>()
+                .Where(c => c.ParentCategoryId == null)
+                .OrderBy(c => c.Name)
                 .ToListAsync(cancellationToken);
         }
 
@@ -85,9 +72,10 @@ namespace Hypesoft.Infrastructure.Repositories
             CancellationToken cancellationToken = default
         )
         {
-            return await _collection
-                .Find(c => c.ParentCategoryId == parentId)
-                .SortBy(c => c.Name)
+            return await DbContext
+                .Set<Category>()
+                .Where(c => c.ParentCategoryId == parentId)
+                .OrderBy(c => c.Name)
                 .ToListAsync(cancellationToken);
         }
 
@@ -95,30 +83,15 @@ namespace Hypesoft.Infrastructure.Repositories
             CancellationToken cancellationToken = default
         )
         {
-            var allCategories = await _collection
-                .Find(_ => true)
-                .SortBy(c => c.Name)
+            var allCategories = await DbContext
+                .Set<Category>()
+                .Include(c => c.ChildCategories)
+                .ThenInclude(c => c.ChildCategories)
+                .Where(c => c.ParentCategoryId == null)
+                .OrderBy(c => c.Name)
                 .ToListAsync(cancellationToken);
 
-            var lookup = allCategories.ToLookup(c => c.ParentCategoryId);
-
-            // Função recursiva para construir a árvore
-            void BuildTree(List<Category> categories)
-            {
-                foreach (var category in categories)
-                {
-                    category.ChildCategories = lookup[category.Id].ToList();
-                    if (category.ChildCategories.Any())
-                    {
-                        BuildTree(category.ChildCategories);
-                    }
-                }
-            }
-
-            var rootCategories = allCategories.Where(c => c.ParentCategoryId == null).ToList();
-            BuildTree(rootCategories);
-
-            return rootCategories;
+            return allCategories;
         }
 
         public async Task<PaginatedList<Category>> GetPaginatedCategoriesAsync(
@@ -127,52 +100,18 @@ namespace Hypesoft.Infrastructure.Repositories
             CancellationToken cancellationToken = default
         )
         {
-            var count = await _collection.CountDocumentsAsync(
-                _ => true,
-                cancellationToken: cancellationToken
-            );
-            var items = await _collection
-                .Find(_ => true)
+            var query = DbContext
+                .Set<Category>()
+                .Include(c => c.ParentCategory)
+                .OrderBy(c => c.Name);
+
+            var count = await query.CountAsync(cancellationToken);
+            var items = await query
                 .Skip((pageNumber - 1) * pageSize)
-                .Limit(pageSize)
-                .SortBy(c => c.Name)
+                .Take(pageSize)
                 .ToListAsync(cancellationToken);
 
-            // Carrega os nomes das categorias pai
-            var parentIds = items
-                .Where(c => c.ParentCategoryId.HasValue)
-                .Select(c => c.ParentCategoryId.Value)
-                .Distinct()
-                .ToList();
-
-            if (parentIds.Any())
-            {
-                var parents = await _collection
-                    .Find(c => parentIds.Contains(c.Id))
-                    .Project(c => new { c.Id, c.Name })
-                    .ToListAsync(cancellationToken);
-
-                var parentLookup = parents.ToDictionary(p => p.Id, p => p.Name);
-
-                foreach (var category in items.Where(c => c.ParentCategoryId.HasValue))
-                {
-                    if (
-                        parentLookup.TryGetValue(
-                            category.ParentCategoryId.Value,
-                            out var parentName
-                        )
-                    )
-                    {
-                        category.ParentCategory = new Category
-                        {
-                            Id = category.ParentCategoryId.Value,
-                            Name = parentName,
-                        };
-                    }
-                }
-            }
-
-            return new PaginatedList<Category>(items, (int)count, pageNumber, pageSize);
+            return new PaginatedList<Category>(items, count, pageNumber, pageSize);
         }
 
         public async Task<bool> ExistsWithNameAsync(
@@ -181,14 +120,12 @@ namespace Hypesoft.Infrastructure.Repositories
             CancellationToken cancellationToken = default
         )
         {
-            var filter = excludeId.HasValue
-                ? Builders<Category>.Filter.And(
-                    Builders<Category>.Filter.Eq(c => c.Name, name),
-                    Builders<Category>.Filter.Ne(c => c.Id, excludeId.Value)
-                )
-                : Builders<Category>.Filter.Eq(c => c.Name, name);
-
-            return await _collection.Find(filter).AnyAsync(cancellationToken);
+            var query = DbContext.Set<Category>().Where(c => c.Name == name);
+            if (excludeId.HasValue)
+            {
+                query = query.Where(c => c.Id != excludeId.Value);
+            }
+            return await query.AnyAsync(cancellationToken);
         }
 
         public async Task<bool> ExistsWithSlugAsync(
@@ -197,14 +134,12 @@ namespace Hypesoft.Infrastructure.Repositories
             CancellationToken cancellationToken = default
         )
         {
-            var filter = excludeId.HasValue
-                ? Builders<Category>.Filter.And(
-                    Builders<Category>.Filter.Eq(c => c.Slug, slug),
-                    Builders<Category>.Filter.Ne(c => c.Id, excludeId.Value)
-                )
-                : Builders<Category>.Filter.Eq(c => c.Slug, slug);
-
-            return await _collection.Find(filter).AnyAsync(cancellationToken);
+            var query = DbContext.Set<Category>().Where(c => c.Slug == slug);
+            if (excludeId.HasValue)
+            {
+                query = query.Where(c => c.Id != excludeId.Value);
+            }
+            return await query.AnyAsync(cancellationToken);
         }
 
         public async Task<int> GetProductCountAsync(
@@ -215,21 +150,18 @@ namespace Hypesoft.Infrastructure.Repositories
         {
             if (!includeChildren)
             {
-                return (int)
-                    await _productCollection.CountDocumentsAsync(
-                        p => p.CategoryId == categoryId,
-                        cancellationToken: cancellationToken
-                    );
+                return await DbContext
+                    .Set<Product>()
+                    .CountAsync(p => p.CategoryId == categoryId, cancellationToken);
             }
 
-            var categoryIds = new List<Guid> { categoryId };
-            await GetDescendantCategoryIds(categoryId, categoryIds, cancellationToken);
+            // Para incluir filhos, busca todas as categorias descendentes
+            var categoryIds = await GetDescendantCategoryIds(categoryId, cancellationToken);
+            categoryIds.Add(categoryId);
 
-            return (int)
-                await _productCollection.CountDocumentsAsync(
-                    p => categoryIds.Contains(p.CategoryId),
-                    cancellationToken: cancellationToken
-                );
+            return await DbContext
+                .Set<Product>()
+                .CountAsync(p => categoryIds.Contains(p.CategoryId), cancellationToken);
         }
 
         public async Task<IReadOnlyList<Category>> GetDescendantCategoriesAsync(
@@ -248,7 +180,23 @@ namespace Hypesoft.Infrastructure.Repositories
         )
         {
             var ancestors = new List<Category>();
-            await GetAncestorsRecursive(categoryId, ancestors, cancellationToken);
+            var category = await DbContext
+                .Set<Category>()
+                .Include(c => c.ParentCategory)
+                .FirstOrDefaultAsync(c => c.Id == categoryId, cancellationToken);
+
+            while (category?.ParentCategory != null)
+            {
+                ancestors.Add(category.ParentCategory);
+                category = await DbContext
+                    .Set<Category>()
+                    .Include(c => c.ParentCategory)
+                    .FirstOrDefaultAsync(
+                        c => c.Id == category.ParentCategory.Id,
+                        cancellationToken
+                    );
+            }
+
             return ancestors;
         }
 
@@ -264,36 +212,34 @@ namespace Hypesoft.Infrastructure.Repositories
                 var descendants = await GetDescendantCategoriesAsync(categoryId, cancellationToken);
                 if (descendants.Any(d => d.Id == newParentId.Value))
                 {
-                    return false; // Não pode mover uma categoria para um de seus próprios descendentes
+                    return false;
                 }
             }
 
-            var category = await _collection
-                .Find(c => c.Id == categoryId)
-                .FirstOrDefaultAsync(cancellationToken);
+            var category = await DbContext
+                .Set<Category>()
+                .FirstOrDefaultAsync(c => c.Id == categoryId, cancellationToken);
+
             if (category == null)
                 return false;
 
-            category.ParentCategoryId = newParentId;
-            category.IsMainCategory = !newParentId.HasValue;
-            category.SetUpdatedAt(DateTime.UtcNow);
+            // ✅ Resolvido
+            category.ChangeParent(newParentId);
 
-            await _collection.ReplaceOneAsync(
-                c => c.Id == categoryId,
-                category,
-                cancellationToken: cancellationToken
-            );
+            await DbContext.SaveChangesAsync(cancellationToken);
             return true;
         }
 
+        // Métodos auxiliares privados
         private async Task GetDescendantsRecursive(
             Guid parentId,
             List<Category> descendants,
             CancellationToken cancellationToken
         )
         {
-            var children = await _collection
-                .Find(c => c.ParentCategoryId == parentId)
+            var children = await DbContext
+                .Set<Category>()
+                .Where(c => c.ParentCategoryId == parentId)
                 .ToListAsync(cancellationToken);
 
             foreach (var child in children)
@@ -303,54 +249,26 @@ namespace Hypesoft.Infrastructure.Repositories
             }
         }
 
-        private async Task GetAncestorsRecursive(
-            Guid categoryId,
-            List<Category> ancestors,
-            CancellationToken cancellationToken
-        )
-        {
-            var category = await _collection
-                .Find(c => c.Id == categoryId)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (category?.ParentCategoryId.HasValue == true)
-            {
-                var parent = await _collection
-                    .Find(c => c.Id == category.ParentCategoryId.Value)
-                    .FirstOrDefaultAsync(cancellationToken);
-
-                if (parent != null)
-                {
-                    ancestors.Add(parent);
-                    await GetAncestorsRecursive(parent.Id, ancestors, cancellationToken);
-                }
-            }
-        }
-
-        private async Task GetDescendantCategoryIds(
+        private async Task<List<Guid>> GetDescendantCategoryIds(
             Guid parentId,
-            List<Guid> categoryIds,
             CancellationToken cancellationToken
         )
         {
-            var children = await _collection
-                .Find(c => c.ParentCategoryId == parentId)
-                .Project(c => c.Id)
+            var categoryIds = new List<Guid>();
+            var children = await DbContext
+                .Set<Category>()
+                .Where(c => c.ParentCategoryId == parentId)
+                .Select(c => c.Id)
                 .ToListAsync(cancellationToken);
 
             foreach (var childId in children)
             {
                 categoryIds.Add(childId);
-                await GetDescendantCategoryIds(childId, categoryIds, cancellationToken);
+                var grandChildren = await GetDescendantCategoryIds(childId, cancellationToken);
+                categoryIds.AddRange(grandChildren);
             }
-        }
 
-        public async Task<bool> ExistsAsync(
-            Expression<Func<Category, bool>> predicate,
-            CancellationToken cancellationToken = default
-        )
-        {
-            return await _collection.Find(predicate).AnyAsync(cancellationToken);
+            return categoryIds;
         }
     }
 }

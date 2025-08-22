@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Result;
-using Hypesoft.Application.Features.Roles.Commands;
-using Hypesoft.Application.Features.Roles.Queries;
+using Hypesoft.Application.Commands.Roles;
+using Hypesoft.Application.DTOs;
 using Hypesoft.Domain.Entities;
 using Hypesoft.Domain.Repositories;
 using Hypesoft.Infrastructure.Extensions;
@@ -29,10 +29,12 @@ namespace Hypesoft.API.Controllers
         public RolesController(
             IMediator mediator,
             IRoleRepository roleRepository,
-            ILogger<RolesController> logger)
+            ILogger<RolesController> logger
+        )
         {
             _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
-            _roleRepository = roleRepository ?? throw new ArgumentNullException(nameof(roleRepository));
+            _roleRepository =
+                roleRepository ?? throw new ArgumentNullException(nameof(roleRepository));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -46,7 +48,9 @@ namespace Hypesoft.API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IReadOnlyList<ApplicationRole>>> GetRoles(CancellationToken cancellationToken)
+        public async Task<ActionResult<IReadOnlyList<ApplicationRole>>> GetRoles(
+            CancellationToken cancellationToken
+        )
         {
             try
             {
@@ -56,7 +60,10 @@ namespace Hypesoft.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao obter funções");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao processar sua solicitação");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Ocorreu um erro ao processar sua solicitação"
+                );
             }
         }
 
@@ -72,7 +79,10 @@ namespace Hypesoft.API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<ApplicationRole>> GetRoleById(Guid id, CancellationToken cancellationToken)
+        public async Task<ActionResult<ApplicationRole>> GetRoleById(
+            Guid id,
+            CancellationToken cancellationToken
+        )
         {
             try
             {
@@ -87,7 +97,10 @@ namespace Hypesoft.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao obter função com ID {RoleId}", id);
-                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao processar sua solicitação");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Ocorreu um erro ao processar sua solicitação"
+                );
             }
         }
 
@@ -103,7 +116,10 @@ namespace Hypesoft.API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<ApplicationRole>> GetRoleByName(string name, CancellationToken cancellationToken)
+        public async Task<ActionResult<ApplicationRole>> GetRoleByName(
+            string name,
+            CancellationToken cancellationToken
+        )
         {
             try
             {
@@ -118,7 +134,10 @@ namespace Hypesoft.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao obter função com nome {RoleName}", name);
-                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao processar sua solicitação");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Ocorreu um erro ao processar sua solicitação"
+                );
             }
         }
 
@@ -134,7 +153,10 @@ namespace Hypesoft.API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<ApplicationRole>> CreateRole([FromBody] CreateRoleCommand command, CancellationToken cancellationToken)
+        public async Task<ActionResult<ApplicationRole>> CreateRole(
+            [FromBody] CreateRoleCommand command,
+            CancellationToken cancellationToken
+        )
         {
             try
             {
@@ -142,19 +164,23 @@ namespace Hypesoft.API.Controllers
 
                 if (result.Status == ResultStatus.Invalid)
                 {
-                    result.ValidationErrors.ForEach(error => ModelState.AddModelError(error.Identifier, error.ErrorMessage));
+                    foreach (var error in result.ValidationErrors)
+                    {
+                        ModelState.AddModelError(error.Identifier, error.ErrorMessage);
+                    }
                     return ValidationProblem(ModelState);
                 }
 
-                return CreatedAtAction(
-                    nameof(GetRoleById), 
-                    new { id = result.Value.Id }, 
-                    result.Value);
+                return Ok(result.Value);
+
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao criar função");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao processar sua solicitação");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Ocorreu um erro ao processar sua solicitação"
+                );
             }
         }
 
@@ -173,9 +199,10 @@ namespace Hypesoft.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<ApplicationRole>> UpdateRole(
-            Guid id, 
-            [FromBody] UpdateRoleCommand command, 
-            CancellationToken cancellationToken)
+            Guid id,
+            [FromBody] UpdateRoleCommand command,
+            CancellationToken cancellationToken
+        )
         {
             try
             {
@@ -193,7 +220,11 @@ namespace Hypesoft.API.Controllers
 
                 if (result.Status == ResultStatus.Invalid)
                 {
-                    result.ValidationErrors.ForEach(error => ModelState.AddModelError(error.Identifier, error.ErrorMessage));
+                    foreach (var error in result.ValidationErrors)
+                    {
+                        ModelState.AddModelError(error.Identifier, error.ErrorMessage);
+                    }
+
                     return ValidationProblem(ModelState);
                 }
 
@@ -202,7 +233,10 @@ namespace Hypesoft.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao atualizar função com ID {RoleId}", id);
-                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao processar sua solicitação");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Ocorreu um erro ao processar sua solicitação"
+                );
             }
         }
 
@@ -223,7 +257,7 @@ namespace Hypesoft.API.Controllers
         {
             try
             {
-                var command = new DeleteRoleCommand { Id = id };
+                var command = new DeleteRoleCommand(id);
                 var result = await _mediator.Send(command, cancellationToken);
 
                 if (result.Status == ResultStatus.NotFound)
@@ -233,7 +267,11 @@ namespace Hypesoft.API.Controllers
 
                 if (result.Status == ResultStatus.Invalid)
                 {
-                    result.ValidationErrors.ForEach(error => ModelState.AddModelError(error.Identifier, error.ErrorMessage));
+                    foreach (var error in result.ValidationErrors)
+                    {
+                        ModelState.AddModelError(error.Identifier, error.ErrorMessage);
+                    }
+
                     return ValidationProblem(ModelState);
                 }
 
@@ -242,7 +280,10 @@ namespace Hypesoft.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao excluir função com ID {RoleId}", id);
-                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao processar sua solicitação");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Ocorreu um erro ao processar sua solicitação"
+                );
             }
         }
 
@@ -263,7 +304,8 @@ namespace Hypesoft.API.Controllers
         public async Task<IActionResult> AddClaimToRole(
             Guid id,
             [FromBody] AddClaimToRoleCommand command,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken
+        )
         {
             try
             {
@@ -281,7 +323,10 @@ namespace Hypesoft.API.Controllers
 
                 if (result.Status == ResultStatus.Invalid)
                 {
-                    result.ValidationErrors.ForEach(error => ModelState.AddModelError(error.Identifier, error.ErrorMessage));
+                    foreach (var error in result.ValidationErrors)
+                    {
+                        ModelState.AddModelError(error.Identifier, error.ErrorMessage);
+                    }
                     return ValidationProblem(ModelState);
                 }
 
@@ -290,7 +335,10 @@ namespace Hypesoft.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao adicionar claim à função {RoleId}", id);
-                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao processar sua solicitação");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Ocorreu um erro ao processar sua solicitação"
+                );
             }
         }
 
@@ -311,7 +359,8 @@ namespace Hypesoft.API.Controllers
         public async Task<IActionResult> RemoveClaimFromRole(
             Guid id,
             [FromBody] RemoveClaimFromRoleCommand command,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken
+        )
         {
             try
             {
@@ -329,7 +378,11 @@ namespace Hypesoft.API.Controllers
 
                 if (result.Status == ResultStatus.Invalid)
                 {
-                    result.ValidationErrors.ForEach(error => ModelState.AddModelError(error.Identifier, error.ErrorMessage));
+                    foreach (var error in result.ValidationErrors)
+                    {
+                        ModelState.AddModelError(error.Identifier, error.ErrorMessage);
+                    }
+
                     return ValidationProblem(ModelState);
                 }
 
@@ -338,7 +391,10 @@ namespace Hypesoft.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao remover claim da função {RoleId}", id);
-                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao processar sua solicitação");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Ocorreu um erro ao processar sua solicitação"
+                );
             }
         }
     }

@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Result;
-using Hypesoft.Application.Features.Categories.Commands;
-using Hypesoft.Application.Features.Categories.Queries;
+using Hypesoft.Application.Commands.Categories;
+using Hypesoft.Application.DTOs;
+using Hypesoft.Application.Queries.Categories;
 using Hypesoft.Domain.Entities;
 using Hypesoft.Domain.Repositories;
 using MediatR;
@@ -27,10 +28,12 @@ namespace Hypesoft.API.Controllers
         public CategoriesController(
             IMediator mediator,
             ICategoryRepository categoryRepository,
-            ILogger<CategoriesController> logger)
+            ILogger<CategoriesController> logger
+        )
         {
             _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
-            _categoryRepository = categoryRepository ?? throw new ArgumentNullException(nameof(categoryRepository));
+            _categoryRepository =
+                categoryRepository ?? throw new ArgumentNullException(nameof(categoryRepository));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -45,24 +48,27 @@ namespace Hypesoft.API.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAll(
             [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 20)
+            [FromQuery] int pageSize = 20
+        )
         {
             try
             {
                 pageNumber = Math.Max(1, pageNumber);
                 pageSize = Math.Clamp(pageSize, 1, 100);
 
-                var query = new GetAllCategoriesQuery(pageNumber, pageSize);
+                var query = new GetAllCategoriesQuery(null, pageNumber, pageSize);
+
                 var result = await _mediator.Send(query);
 
-                return result.Status == ResultStatus.NotFound 
-                    ? NotFound() 
-                    : Ok(result);
+                return result.Status == ResultStatus.NotFound ? NotFound() : Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao buscar categorias");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao buscar as categorias");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Ocorreu um erro ao buscar as categorias"
+                );
             }
         }
 
@@ -81,14 +87,15 @@ namespace Hypesoft.API.Controllers
                 var query = new GetCategoryByIdQuery(id);
                 var result = await _mediator.Send(query);
 
-                return result.Status == ResultStatus.NotFound 
-                    ? NotFound() 
-                    : Ok(result);
+                return result.Status == ResultStatus.NotFound ? NotFound() : Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao buscar categoria com ID {CategoryId}", id);
-                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao buscar a categoria");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Ocorreu um erro ao buscar a categoria"
+                );
             }
         }
 
@@ -121,7 +128,10 @@ namespace Hypesoft.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao criar categoria");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao criar a categoria");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Ocorreu um erro ao criar a categoria"
+                );
             }
         }
 
@@ -159,7 +169,10 @@ namespace Hypesoft.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao atualizar categoria com ID {CategoryId}", id);
-                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao atualizar a categoria");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Ocorreu um erro ao atualizar a categoria"
+                );
             }
         }
 
@@ -176,7 +189,8 @@ namespace Hypesoft.API.Controllers
         {
             try
             {
-                var command = new DeleteCategoryCommand { Id = id };
+                var command = new DeleteCategoryCommand(id);
+
                 var result = await _mediator.Send(command);
 
                 if (result.Status == ResultStatus.NotFound)
@@ -190,7 +204,10 @@ namespace Hypesoft.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao remover categoria com ID {CategoryId}", id);
-                return StatusCode(StatusCodes.Status500InternalServerError, "Ocorreu um erro ao remover a categoria");
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Ocorreu um erro ao remover a categoria"
+                );
             }
         }
     }

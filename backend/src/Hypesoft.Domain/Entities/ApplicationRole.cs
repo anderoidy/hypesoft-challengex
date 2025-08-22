@@ -1,103 +1,83 @@
 using System;
 using System.Collections.Generic;
+using Hypesoft.Domain.Common;
 using Hypesoft.Domain.Common.Interfaces;
+using Hypesoft.Domain.Entities;
+using Hypesoft.Domain.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace Hypesoft.Domain.Entities
 {
-    /// <summary>
-    /// Represents a role in the application.
-    /// </summary>
-    public class ApplicationRole : IdentityRole<Guid>, IEntity
+    [BsonIgnoreExtraElements]
+    public class ApplicationRole : IdentityRole, IEntity<string>
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ApplicationRole"/> class.
-        /// </summary>
         public ApplicationRole()
+            : base()
         {
-            Claims = new List<IdentityRoleClaim<Guid>>();
+            Id = Guid.NewGuid().ToString();
+            ConcurrencyStamp = Guid.NewGuid().ToString();
             CreatedAt = DateTime.UtcNow;
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ApplicationRole"/> class with the specified role name.
-        /// </summary>
-        /// <param name="roleName">The name of the role.</param>
-        public ApplicationRole(string roleName) : base(roleName)
+        public ApplicationRole(string roleName)
+            : base(roleName)
         {
-            Claims = new List<IdentityRoleClaim<Guid>>();
-            CreatedAt = DateTime.UtcNow;
+            NormalizedName = roleName?.ToUpperInvariant();
         }
 
-        /// <summary>
-        /// Gets or sets the description for the role.
-        /// </summary>
-        public string? Description { get; set; }
+        [BsonId]
+        public new string Id { get; set; }
 
-        /// <summary>
-        /// Gets the date and time when the role was created.
-        /// </summary>
-        public DateTime CreatedAt { get; set; }
+        public new string Name { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Gets the ID of the user who created the role.
-        /// </summary>
-        public string? CreatedBy { get; set; }
+        public new string NormalizedName { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Gets the date and time when the role was last updated.
-        /// </summary>
-        public DateTime? UpdatedAt { get;set; }
+        public new string ConcurrencyStamp { get; set; } = Guid.NewGuid().ToString();
 
-        /// <summary>
-        /// Gets the date and time when the role was last modified.
-        /// </summary>
-        public DateTime? LastModifiedAt { get; set; }
+        public string Description { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Gets the ID of the user who last modified the role.
-        /// </summary>
-        public string? LastModifiedBy { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        /// <summary>
-        /// Gets or sets the claims associated with the role.
-        /// </summary>
-        public virtual ICollection<IdentityRoleClaim<Guid>> Claims { get; set; }
+        public string CreatedBy { get; set; }
 
-        /// <summary>
-        /// Sets the user who created the role.
-        /// </summary>
-        /// <param name="userId">The ID of the user who created the role.</param>
-        public void SetCreatedBy(string userId)
+        public DateTime? UpdatedAt { get; set; }
+
+        public string UpdatedBy { get; set; }
+
+        public bool IsActive { get; set; } = true;
+
+        public bool IsSystemRole { get; set; }
+
+        [BsonIgnore]
+        public virtual ICollection<IdentityUserRole<string>> UserRoles { get; set; } =
+            new List<IdentityUserRole<string>>();
+
+        public virtual ICollection<IdentityRoleClaim<string>> Claims { get; set; } =
+            new List<IdentityRoleClaim<string>>();
+
+        public void Update(string name, string description, string updatedBy)
         {
-            if (string.IsNullOrWhiteSpace(userId))
-                throw new ArgumentException("O ID do usuário não pode ser vazio", nameof(userId));
-                
-            CreatedBy = userId;
+            Name = name;
+            NormalizedName = name?.ToUpperInvariant();
+            Description = description;
+            UpdatedAt = DateTime.UtcNow;
+            UpdatedBy = updatedBy;
+            ConcurrencyStamp = Guid.NewGuid().ToString();
         }
 
-        /// <summary>
-        /// Sets the date and time when the role was last updated.
-        /// </summary>
-        /// <param name="updatedAt">The date and time of the update.</param>
-        public void SetUpdatedAt(DateTime updatedAt)
+        public void Deactivate(string updatedBy)
         {
-            UpdatedAt = updatedAt;
+            IsActive = false;
+            UpdatedAt = DateTime.UtcNow;
+            UpdatedBy = updatedBy;
+            ConcurrencyStamp = Guid.NewGuid().ToString();
         }
 
-        /// <summary>
-        /// Sets the user who last modified the role and updates the last modified timestamp.
-        /// </summary>
-        /// <param name="userId">The ID of the user who modified the role.</param>
-        /// <param name="modifiedAt">Optional. The date and time of the modification. If not provided, the current UTC time will be used.</param>
-        public void SetLastModifiedBy(string userId, DateTime? modifiedAt = null)
+        public void SetLastModifiedBy(string modifiedBy)
         {
-            if (string.IsNullOrWhiteSpace(userId))
-                throw new ArgumentException("O ID do usuário não pode ser vazio", nameof(userId));
-                
-            LastModifiedBy = userId;
-            LastModifiedAt = modifiedAt ?? DateTime.UtcNow;
-            UpdatedAt = LastModifiedAt;
+            UpdatedAt = DateTime.UtcNow;
+            UpdatedBy = modifiedBy;
         }
     }
 }

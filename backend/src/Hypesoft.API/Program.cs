@@ -1,163 +1,101 @@
-using Hypesoft.Application;
-using Hypesoft.Infrastructure;
-using Hypesoft.Domain.Exceptions;
+using System.IO;
 using System.Reflection;
-using Hypesoft.Infrastructure.Data;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Hypesoft.Infrastructure.Auth;
-using Microsoft.ApplicationInsights;
-using MongoDB.Driver;
-using Microsoft.AspNetCore.Identity;
-using Hypesoft.Domain.Entities;
+using System.Text.Json.Serialization;
+using Hypesoft.Infrastructure.Configurations;
+using Hypesoft.Infrastructure.Data;
+using Hypesoft.Infrastructure.Middleware;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using Serilog;
+
+Console.WriteLine("🚀 [1] Starting application...");
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configuração do MongoDB
-var mongoDBSettings = builder.Configuration.GetSection(MongoDBSettings.SectionName).Get<MongoDBSettings>();
-if (mongoDBSettings == null || string.IsNullOrEmpty(mongoDBSettings.ConnectionString) || string.IsNullOrEmpty(mongoDBSettings.DatabaseName))
-{
-    throw new InvalidOperationException("Configuração do MongoDB não encontrada ou inválida no appsettings.json");
-}
+Console.WriteLine("✅  Builder created successfully!");
 
-// Configurar o cliente MongoDB
-builder.Services.AddSingleton<IMongoClient>(sp => 
-    new MongoClient(MongoClientSettings.FromConnectionString(mongoDBSettings.ConnectionString)));
+// Add configuration
+builder
+    .Configuration.SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
+    .AddEnvironmentVariables();
 
-// Configurar o banco de dados MongoDB
-builder.Services.AddScoped<IMongoDatabase>(sp => 
-    sp.GetRequiredService<IMongoClient>().GetDatabase(mongoDBSettings.DatabaseName));
+Console.WriteLine("📋 [3] Configuration loaded!");
 
-// Configurar o ApplicationDbContext
-builder.Services.AddScoped<ApplicationDbContext>(sp =>
-{
-    var client = sp.GetRequiredService<IMongoClient>();
-    var database = client.GetDatabase(mongoDBSettings.DatabaseName);
-    return new ApplicationDbContext(database);
-});
+// Configure Serilog
+Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(builder.Configuration).CreateLogger();
+builder.Host.UseSerilog();
 
-// Configure MongoDB Settings
-builder.Services.Configure<MongoDBSettings>(
-    builder.Configuration.GetSection(MongoDBSettings.SectionName));
+Console.WriteLine("📄 [4] Serilog configured!");
 
-// Configure JWT Settings
-builder.Services.Configure<JwtSettings>(
-    builder.Configuration.GetSection(JwtSettings.SectionName));
-
-// Configuração do MediatR
-builder.Services.AddMediatR(cfg => 
-    cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
-
-// Configuração do AutoMapper
-builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-// Configuração dos repositórios
-builder.Services.AddScoped(typeof(IRepository<>), typeof(RepositoryBase<>));
-builder.Services.AddScoped<IProductRepository, ProductRepository>();
-builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-
-// Registrar serviços das camadas Application e Infrastructure
-builder.Services.AddApplicationServices();
-builder.Services.AddInfrastructureServices(builder.Configuration);
-
-// Add JWT Authentication
-var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>();
-if (jwtSettings?.Secret != null)
-{
-    builder.Services.AddAuthentication(options =>
+// Add services to the container
+builder
+    .Services.AddControllers()
+    .AddJsonOptions(options =>
     {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings.Issuer,
-            ValidAudience = jwtSettings.Audience,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwtSettings.Secret)),
-            ClockSkew = TimeSpan.Zero
-        };
-    });
-}
-
-// Register JWT Service
-builder.Services.AddScoped<IJwtService, JwtService>();
-
-// Register MongoDB migration services
-builder.Services.AddScoped<MongoDbMigrator>();
-
-// Add Application Insights telemetry
-builder.Services.AddApplicationInsightsTelemetry(options =>
-{
-    options.EnableAdaptiveSampling = false; // For development, set to true in production
-    options.EnableDependencyTrackingTelemetryModule = true;
-    options.EnablePerformanceCounterCollectionModule = true;
-    options.EnableEventCounterCollectionModule = true;
-    options.EnableDependencyTrackingTelemetryModule = true;
-    options.EnableQuickPulseMetricStream = true;
-    options.EnableDiagnosticsTelemetryModule = true;
-    options.EnableAzureInstanceMetadataTelemetryModule = true;
-    options.EnableAppServicesHeartbeatTelemetryModule = true;
-    options.EnableHeartbeat = true;
-    options.AddAutoCollectedMetricExtractor = true;
-    options.RequestCollectionOptions.TrackExceptions = true;
-});
-
-// Configuração do Health Check
-builder.Services.AddHealthChecks()
-    .AddMongoDb(
-        mongodbConnectionString: mongoDBSettings.ConnectionString,
-        name: "mongodb",
-        tags: new[] { "ready" });
-
-// Add custom health check for MongoDB
-builder.Services.AddSingleton<MongoDbHealthCheck>();
-
-// Adiciona serviços ao container.
-builder.Services.AddControllers()
-    .AddNewtonsoftJson(options =>
-    {
-        options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
-        options.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
 
-// Configuração do CORS
+Console.WriteLine("🎮 [5] Controllers added!");
+
+// Add infrastructure services (inclui MongoDB e repositories)
+Console.WriteLine("⚠️   About to add Infrastructure services (MongoDB)...");
+builder.Services.AddInfrastructure(builder.Configuration);
+Console.WriteLine("✅ [7] Infrastructure services added!");
+
+// Configure CORS
+var corsSettings = builder.Configuration.GetSection("Cors").Get<CorsSettings>();
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", builder =>
-    {
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader();
-    });
+    options.AddPolicy(
+        "AllowSpecificOrigins",
+        policy =>
+        {
+            if (corsSettings?.AllowedOrigins != null && corsSettings.AllowedOrigins.Any())
+            {
+                policy
+                    .WithOrigins(corsSettings.AllowedOrigins.ToArray())
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials();
+            }
+        }
+    );
 });
+
+Console.WriteLine("🌐 [8] CORS configured!");
+
+// Add basic health checks
+Console.WriteLine("⚠️   Adding basic health checks...");
+builder.Services.AddHealthChecks();
+Console.WriteLine("✅  Health checks added!");
 
 // Configure Swagger
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo 
-    { 
-        Title = "Hypesoft Challenge X API", 
-        Version = "v1",
-        Description = "API for managing products with JWT authentication",
-        Contact = new OpenApiContact
+    c.SwaggerDoc(
+        "v1",
+        new OpenApiInfo
         {
-            Name = "Hypesoft Team",
-            Email = "dev@hypesoft.com"
-        },
-        License = new OpenApiLicense
-        {
-            Name = "MIT License",
-            Url = new Uri("https://opensource.org/licenses/MIT")
+            Title = "Hypesoft Challenge X API",
+            Version = "v1",
+            Description = "API for managing products with JWT authentication",
+            Contact = new OpenApiContact { Name = "Hypesoft Team", Email = "dev@hypesoft.com" },
+            License = new OpenApiLicense
+            {
+                Name = "MIT License",
+                Url = new Uri("https://opensource.org/licenses/MIT"),
+            },
         }
-    });
+    );
 
     // Add JWT Authentication to Swagger
     var securityScheme = new OpenApiSecurityScheme
@@ -171,103 +109,129 @@ builder.Services.AddSwaggerGen(c =>
         Reference = new OpenApiReference
         {
             Id = JwtBearerDefaults.AuthenticationScheme,
-            Type = ReferenceType.SecurityScheme
-        }
+            Type = ReferenceType.SecurityScheme,
+        },
     };
 
     c.AddSecurityDefinition(securityScheme.Reference.Id, securityScheme);
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        { securityScheme, Array.Empty<string>() }
-    });
+    c.AddSecurityRequirement(
+        new OpenApiSecurityRequirement { { securityScheme, Array.Empty<string>() } }
+    );
 
     // Enable XML comments for Swagger
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    c.IncludeXmlComments(xmlPath);
-    
-    // Enable annotations for Swagger
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath);
+    }
+
     c.EnableAnnotations();
-    
-    // Add operation filters if needed
-    // c.OperationFilter<AddResponseHeadersFilter>();
 });
 
-var app = builder.Build();
+Console.WriteLine("📚 [11] Swagger configured!");
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Configure JWT Authentication
+var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
+if (jwtSettings != null)
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Hypesoft Challenge X API v1");
-        c.RoutePrefix = string.Empty; // Serve Swagger UI at the root
-        c.DocumentTitle = "Hypesoft Challenge X API Documentation";
-        
-        // Enable the "Authorize" button in Swagger UI
-        c.OAuthClientId("swagger-ui");
-        c.OAuthAppName("Swagger UI");
-        c.OAuthUsePkce();
-    });
-    
-    // Apply migrations in development
-    using (var scope = app.Services.CreateScope())
-    {
-        try
+    builder
+        .Services.AddAuthentication(options =>
         {
-            var migrator = scope.ServiceProvider.GetRequiredService<MongoDbMigrator>();
-            await migrator.MigrateAsync();
-        }
-        catch (Exception ex)
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
         {
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-            logger.LogError(ex, "An error occurred while migrating the database.");
-        }
-    }
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtSettings.Issuer,
+                ValidAudience = jwtSettings.Audience,
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtSettings.Key)
+                ),
+                ClockSkew = TimeSpan.Zero,
+            };
+        });
 }
 
-// Add Authentication & Authorization middleware
-app.UseHttpsRedirection();
-app.UseCors("AllowAll");
+Console.WriteLine("🔐 [12] JWT Authentication configured!");
+
+Console.WriteLine("⚙️   All services configured, building app...");
+
+// Build the application
+var app = builder.Build();
+
+Console.WriteLine("🏗️  [14] App built successfully!");
+
+// Configure the HTTP request pipeline - SWAGGER SEMPRE ATIVO
+app.UseStaticFiles();
+app.UseDeveloperExceptionPage();
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Hypesoft Challenge X API v1");
+    c.RoutePrefix = "swagger";
+});
+
+Console.WriteLine("🛠️  [15] Pipeline configured!");
+
+// Enable CORS
+app.UseCors("AllowSpecificOrigins");
+
+// Enable routing and authentication/authorization
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Add global exception handling middleware
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+Console.WriteLine("🔧 [16] Middleware configured!");
+
+// Map controllers and health checks
 app.MapControllers();
-
-// Add health check endpoints
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
-{
-    Predicate = (check) => check.Tags.Contains("ready"),
-    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-});
-
-app.MapHealthChecks("/health/live", new HealthCheckOptions
-{
-    Predicate = (_) => false
-});
-
-// Enable Application Insights telemetry
-app.Use(async (context, next) =>
-{
-    // Track request telemetry
-    var requestTelemetry = context.Features.Get<RequestTelemetry>();
-    if (requestTelemetry != null)
-    {
-        // Add custom properties to all requests
-        requestTelemetry.Properties["Application"] = "Hypesoft.API";
-        requestTelemetry.Properties["Environment"] = app.Environment.EnvironmentName;
-    }
-
-    await next();
-});
-
-//Banco 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMongoDB(connectionString, databaseName));
-
 app.MapHealthChecks("/health");
 
-app.Run();
+Console.WriteLine("🛣️  [17] Endpoints mapped!");
+
+Console.WriteLine("🌐  About to start listening...");
+
+// Configurar porta disponível
+app.Urls.Clear();
+app.Urls.Add("http://localhost:5010");
+
+Console.WriteLine("🎯 [19] URLs configured: http://localhost:5010");
+
+try
+{
+    Console.WriteLine("🚀  Starting Kestrel server...");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"❌ [ERROR] Failed to start server: {ex.Message}");
+}
+
+Console.WriteLine("✅ [21] Server stopped successfully!");
 
 // Make the Program class public for integration testing
 public partial class Program { }
+
+// Settings classes
+public class JwtSettings
+{
+    public string Key { get; set; } = string.Empty;
+    public string Issuer { get; set; } = string.Empty;
+    public string Audience { get; set; } = string.Empty;
+    public int ExpirationInMinutes { get; set; } = 60;
+}
+
+public class CorsSettings
+{
+    public List<string> AllowedOrigins { get; set; } = new();
+}
