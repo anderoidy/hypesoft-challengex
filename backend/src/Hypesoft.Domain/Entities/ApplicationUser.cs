@@ -12,6 +12,7 @@ namespace Hypesoft.Domain.Entities
         [BsonId]
         public Guid Id { get; set; } = Guid.NewGuid();
 
+        // ✅ IDENTITY PROPERTIES (MANTIDOS):
         public string? UserName { get; set; }
         public string? NormalizedUserName { get; set; }
         public string? Email { get; set; }
@@ -27,7 +28,7 @@ namespace Hypesoft.Domain.Entities
         public bool LockoutEnabled { get; set; }
         public int AccessFailedCount { get; set; }
 
-        // ApplicationUser specific properties
+        // ✅ CUSTOM PROPERTIES (MANTIDOS):
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
         public bool IsActive { get; set; } = true;
@@ -38,15 +39,18 @@ namespace Hypesoft.Domain.Entities
         public string? LastModifiedBy { get; private set; }
         public bool IsDeleted { get; private set; }
 
-        // Navigation properties
+        // ✅ NAVIGATION PROPERTIES (AJUSTES MENORES):
         [BsonElement("UserRoles")]
         public ICollection<string> RoleIds { get; set; } = new List<string>();
 
-        [BsonIgnore]
-        public ICollection<ApplicationUserRole> UserRoles { get; set; } =
-            new List<ApplicationUserRole>();
+        [BsonIgnore] // ✅ Importante para MongoDB
+        public virtual ICollection<ApplicationUserRole> UserRoles { get; set; } = new List<ApplicationUserRole>();
 
-        // Audit methods
+        // ✅ COMPUTED PROPERTY (NOVO):
+        [BsonIgnore]
+        public string FullName => $"{FirstName} {LastName}".Trim();
+
+        // ✅ AUDIT METHODS (MANTIDOS - ESTÃO PERFEITOS):
         public void SetUpdatedAt(DateTime updatedAt)
         {
             UpdatedAt = updatedAt;
@@ -65,6 +69,25 @@ namespace Hypesoft.Domain.Entities
         {
             IsDeleted = true;
             SetLastModifiedBy(deletedBy);
+        }
+
+        // ✅ MÉTODOS UTILITÁRIOS ADICIONAIS:
+        public void SetLastLogin(DateTime loginTime)
+        {
+            LastLoginAt = loginTime;
+            SetUpdatedAt(loginTime);
+        }
+
+        public void ActivateUser(string activatedBy)
+        {
+            IsActive = true;
+            SetLastModifiedBy(activatedBy);
+        }
+
+        public void DeactivateUser(string deactivatedBy)
+        {
+            IsActive = false;
+            SetLastModifiedBy(deactivatedBy);
         }
     }
 }

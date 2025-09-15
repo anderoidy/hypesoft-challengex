@@ -1,16 +1,16 @@
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
-using System.Net.Http;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Hypesoft.API.Controllers;
 
@@ -26,40 +26,128 @@ public class AuthController : ControllerBase
     public AuthController(
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
-        ILogger<AuthController> logger)
+        ILogger<AuthController> logger
+    )
     {
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
         _logger = logger;
     }
 
+    //Tester X
+    [HttpGet("test")]
+    [AllowAnonymous]
+    public IActionResult Test()
+    {
+        Console.WriteLine("🟢 ENTRANDO NO MÉTODO TEST");
+
+        try
+        {
+            Console.WriteLine("🟢 DENTRO DO TRY");
+
+            // Testa se logger funciona
+            if (_logger != null)
+            {
+                Console.WriteLine("🟢 LOGGER OK");
+                _logger.LogInformation("Teste endpoint chamado");
+            }
+            else
+            {
+                Console.WriteLine("⚠️ LOGGER É NULL");
+            }
+
+            // Testa se configuration funciona
+            if (_configuration != null)
+            {
+                Console.WriteLine("🟢 CONFIGURATION OK");
+            }
+            else
+            {
+                Console.WriteLine("⚠️ CONFIGURATION É NULL");
+            }
+
+            Console.WriteLine("🟢 CRIANDO RESPONSE");
+
+            var response = new
+            {
+                message = "Controller está funcionando!",
+                timestamp = DateTime.UtcNow.ToString(),
+                status = "success",
+            };
+
+            Console.WriteLine("🟢 RETORNANDO OK");
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🚨 EXCEÇÃO CAPTURADA NO TEST: {ex.Message}");
+            Console.WriteLine($"🚨 TIPO: {ex.GetType().Name}");
+            Console.WriteLine($"🚨 STACK: {ex.StackTrace}");
+
+            return StatusCode(
+                500,
+                new
+                {
+                    error = "Erro no teste",
+                    message = ex.Message,
+                    type = ex.GetType().Name,
+                }
+            );
+        }
+        finally
+        {
+            Console.WriteLine("🟢 SAINDO DO MÉTODO TEST");
+        }
+    }
+
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
+        Console.WriteLine($"🔥 LOGIN CHAMADO! Username: {request?.Username}");
         try
         {
-            var tokenEndpoint = $"{_configuration["Keycloak:Authority"]}/protocol/openid-connect/token";
+            var tokenEndpoint =
+                $"{_configuration["Keycloak:Authority"]}/protocol/openid-connect/token";
             var clientId = _configuration["Keycloak:ClientId"];
             var clientSecret = _configuration["Keycloak:ClientSecret"];
 
             var client = _httpClientFactory.CreateClient();
-            var requestContent = new FormUrlEncodedContent(new[]
-            {
-                new KeyValuePair<string, string>("grant_type", "password"),
-                new KeyValuePair<string, string>("client_id", clientId ?? throw new ArgumentNullException(nameof(clientId))),
-                new KeyValuePair<string, string>("client_secret", clientSecret ?? throw new ArgumentNullException(nameof(clientSecret))),
-                new KeyValuePair<string, string>("username", request.Username ?? throw new ArgumentNullException(nameof(request.Username))),
-                new KeyValuePair<string, string>("password", request.Password ?? throw new ArgumentNullException(nameof(request.Password)))
-            });
+            var requestContent = new FormUrlEncodedContent(
+                new[]
+                {
+                    new KeyValuePair<string, string>("grant_type", "password"),
+                    new KeyValuePair<string, string>(
+                        "client_id",
+                        clientId ?? throw new ArgumentNullException(nameof(clientId))
+                    ),
+                    new KeyValuePair<string, string>(
+                        "client_secret",
+                        clientSecret ?? throw new ArgumentNullException(nameof(clientSecret))
+                    ),
+                    new KeyValuePair<string, string>(
+                        "username",
+                        request.Username
+                            ?? throw new ArgumentNullException(nameof(request.Username))
+                    ),
+                    new KeyValuePair<string, string>(
+                        "password",
+                        request.Password
+                            ?? throw new ArgumentNullException(nameof(request.Password))
+                    ),
+                }
+            );
 
             var response = await client.PostAsync(tokenEndpoint, requestContent);
             var content = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Falha no login para o usuário {Username}. Resposta: {Response}", 
-                    request.Username, content);
+                _logger.LogWarning(
+                    "Falha no login para o usuário {Username}. Resposta: {Response}",
+                    request.Username,
+                    content
+                );
                 return Unauthorized(new { message = "Usuário ou senha inválidos" });
             }
 
@@ -68,8 +156,15 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao processar login para o usuário {Username}", request.Username);
-            return StatusCode(500, new { message = "Ocorreu um erro ao processar sua solicitação" });
+            _logger.LogError(
+                ex,
+                "Erro ao processar login para o usuário {Username}",
+                request.Username
+            );
+            return StatusCode(
+                500,
+                new { message = "Ocorreu um erro ao processar sua solicitação" }
+            );
         }
     }
 
@@ -79,18 +174,31 @@ public class AuthController : ControllerBase
     {
         try
         {
-            var tokenEndpoint = $"{_configuration["Keycloak:Authority"]}/protocol/openid-connect/token";
+            var tokenEndpoint =
+                $"{_configuration["Keycloak:Authority"]}/protocol/openid-connect/token";
             var clientId = _configuration["Keycloak:ClientId"];
             var clientSecret = _configuration["Keycloak:ClientSecret"];
 
             var client = _httpClientFactory.CreateClient();
-            var requestContent = new FormUrlEncodedContent(new[]
-            {
-                new KeyValuePair<string, string>("grant_type", "refresh_token"),
-                new KeyValuePair<string, string>("client_id", clientId ?? throw new ArgumentNullException(nameof(clientId))),
-                new KeyValuePair<string, string>("client_secret", clientSecret ?? throw new ArgumentNullException(nameof(clientSecret))),
-                new KeyValuePair<string, string>("refresh_token", request.RefreshToken ?? throw new ArgumentNullException(nameof(request.RefreshToken)))
-            });
+            var requestContent = new FormUrlEncodedContent(
+                new[]
+                {
+                    new KeyValuePair<string, string>("grant_type", "refresh_token"),
+                    new KeyValuePair<string, string>(
+                        "client_id",
+                        clientId ?? throw new ArgumentNullException(nameof(clientId))
+                    ),
+                    new KeyValuePair<string, string>(
+                        "client_secret",
+                        clientSecret ?? throw new ArgumentNullException(nameof(clientSecret))
+                    ),
+                    new KeyValuePair<string, string>(
+                        "refresh_token",
+                        request.RefreshToken
+                            ?? throw new ArgumentNullException(nameof(request.RefreshToken))
+                    ),
+                }
+            );
 
             var response = await client.PostAsync(tokenEndpoint, requestContent);
             var content = await response.Content.ReadAsStringAsync();
@@ -107,7 +215,10 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erro ao atualizar token");
-            return StatusCode(500, new { message = "Ocorreu um erro ao processar sua solicitação" });
+            return StatusCode(
+                500,
+                new { message = "Ocorreu um erro ao processar sua solicitação" }
+            );
         }
     }
 
@@ -116,24 +227,42 @@ public class AuthController : ControllerBase
     {
         try
         {
-            var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-            var logoutEndpoint = $"{_configuration["Keycloak:Authority"]}/protocol/openid-connect/logout";
+            var token = HttpContext
+                .Request.Headers["Authorization"]
+                .ToString()
+                .Replace("Bearer ", "");
+            var logoutEndpoint =
+                $"{_configuration["Keycloak:Authority"]}/protocol/openid-connect/logout";
             var clientId = _configuration["Keycloak:ClientId"];
             var clientSecret = _configuration["Keycloak:ClientSecret"];
 
             var client = _httpClientFactory.CreateClient();
-            var requestContent = new FormUrlEncodedContent(new[]
-            {
-                new KeyValuePair<string, string>("client_id", clientId ?? throw new ArgumentNullException(nameof(clientId))),
-                new KeyValuePair<string, string>("client_secret", clientSecret ?? throw new ArgumentNullException(nameof(clientSecret))),
-                new KeyValuePair<string, string>("refresh_token", token ?? throw new ArgumentNullException(nameof(token)))
-            });
+            var requestContent = new FormUrlEncodedContent(
+                new[]
+                {
+                    new KeyValuePair<string, string>(
+                        "client_id",
+                        clientId ?? throw new ArgumentNullException(nameof(clientId))
+                    ),
+                    new KeyValuePair<string, string>(
+                        "client_secret",
+                        clientSecret ?? throw new ArgumentNullException(nameof(clientSecret))
+                    ),
+                    new KeyValuePair<string, string>(
+                        "refresh_token",
+                        token ?? throw new ArgumentNullException(nameof(token))
+                    ),
+                }
+            );
 
             var response = await client.PostAsync(logoutEndpoint, requestContent);
-            
+
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Falha ao fazer logout. Status: {StatusCode}", response.StatusCode);
+                _logger.LogWarning(
+                    "Falha ao fazer logout. Status: {StatusCode}",
+                    response.StatusCode
+                );
             }
 
             return Ok(new { message = "Logout realizado com sucesso" });
@@ -161,28 +290,28 @@ public class TokenResponse
 {
     [JsonPropertyName("access_token")]
     public string AccessToken { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("expires_in")]
     public int ExpiresIn { get; set; }
-    
+
     [JsonPropertyName("refresh_expires_in")]
     public int RefreshExpiresIn { get; set; }
-    
+
     [JsonPropertyName("refresh_token")]
     public string RefreshToken { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("token_type")]
     public string TokenType { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("id_token")]
     public string IdToken { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("not-before-policy")]
     public int NotBeforePolicy { get; set; }
-    
+
     [JsonPropertyName("session_state")]
     public string SessionState { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("scope")]
     public string Scope { get; set; } = string.Empty;
 }

@@ -1,12 +1,12 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Hypesoft.API.Controllers.Base;
 
 [ApiController]
-[Route("api/[controller]")]
-[Authorize(AuthenticationSchemes = "Bearer")]
+[Route("api/[api/BaseAuth]")]
+//[Authorize(AuthenticationSchemes = "Bearer")]
 public abstract class BaseAuthController : ControllerBase
 {
     protected string? UserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -16,7 +16,8 @@ public abstract class BaseAuthController : ControllerBase
 
     protected bool IsInRole(string role)
     {
-        return User.IsInRole(role) || User.HasClaim(c => c.Type == "realm_roles" && c.Value.Contains(role));
+        return User.IsInRole(role)
+            || User.HasClaim(c => c.Type == "realm_roles" && c.Value.Contains(role));
     }
 
     protected IActionResult Forbidden(string message = "Acesso negado")

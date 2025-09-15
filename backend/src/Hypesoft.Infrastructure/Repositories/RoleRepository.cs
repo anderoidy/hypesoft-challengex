@@ -4,13 +4,14 @@ using Ardalis.Specification.EntityFrameworkCore;
 using Hypesoft.Domain.Entities;
 using Hypesoft.Domain.Specifications;
 using Hypesoft.Infrastructure.Data;
+using Microsoft.Extensions.Logging;
 
 namespace Hypesoft.Infrastructure.Repositories
 {
-    public class RoleRepository : RepositoryBase<ApplicationRole>
+    public class RoleRepository : BaseRepository<ApplicationRole>
     {
-        public RoleRepository(ApplicationDbContext context)
-            : base(context) { }
+        public RoleRepository(ApplicationDbContext context, ILogger<RoleRepository> roleLogger)
+            : base(context, roleLogger) { }
 
         public async Task<ApplicationRole?> GetByNameAsync(
             string name,

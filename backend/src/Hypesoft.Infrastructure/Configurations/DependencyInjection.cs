@@ -1,6 +1,4 @@
-using Ardalis.Specification.EntityFrameworkCore;
-using Hypesoft.Domain.Entities;
-using Hypesoft.Infrastructure.Configurations;
+using Hypesoft.Domain.Repositories;
 using Hypesoft.Infrastructure.Data;
 using Hypesoft.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -11,26 +9,23 @@ namespace Hypesoft.Infrastructure.Configurations
 {
     public static class DependencyInjection
     {
-        public static IServiceCollection AddInfrastructure(
+        public static IServiceCollection AddInfrastructureServices(
             this IServiceCollection services,
-            IConfiguration configuration)
+            IConfiguration configuration
+        )
         {
-            // Configure MongoDB settings
-            services.Configure<MongoDbSettings>(configuration.GetSection("MongoDbSettings"));
+            // ✅ EF Core + MongoDB Provider
+            var connectionString = configuration.GetConnectionString("MongoDB") ?? "mongodb://localhost:27017";
+            var databaseName = configuration["MongoDB:DatabaseName"] ?? "HypesoftDb";
 
-            // ✅ Configure Entity Framework with MongoDB
             services.AddDbContext<ApplicationDbContext>(options =>
-            {
-                var mongoSettings = configuration.GetSection("MongoDbSettings").Get<MongoDbSettings>();
-                var connectionString = mongoSettings?.ConnectionString ?? "mongodb://localhost:27017";
-                var databaseName = mongoSettings?.DatabaseName ?? "HypesoftDb";
-                options.UseMongoDB(connectionString, databaseName);
-            });
+                options.UseMongoDB(connectionString, databaseName)
+            );
 
-            // ✅ Configure repositories usando RepositoryBase (Ardalis)
-            services.AddScoped<RepositoryBase<ApplicationRole>, RoleRepository>();
-            services.AddScoped<RepositoryBase<Category>, CategoryRepository>();
-            services.AddScoped<RepositoryBase<Product>, ProductRepository>();
+            // ✅ REGISTRAR INTERFACES CORRETAS:
+            services.AddScoped<IProductRepository, ProductRepository>();
+            services.AddScoped<ICategoryRepository, CategoryRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
 
             return services;
         }

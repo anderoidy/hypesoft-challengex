@@ -18,7 +18,7 @@ namespace Hypesoft.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    //[Authorize]
     public class CategoriesController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -104,7 +104,7 @@ namespace Hypesoft.API.Controllers
         /// </summary>
         /// <param name="command">Dados da categoria</param>
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "categorias-create,Admin")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]

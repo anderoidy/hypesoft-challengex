@@ -27,7 +27,10 @@ namespace Hypesoft.Infrastructure.Extensions
                 }
 
                 var method = typeof(ModelBuilderExtensions)
-                    .GetMethod(nameof(GetSoftDeleteFilter), BindingFlags.NonPublic | BindingFlags.Static)
+                    .GetMethod(
+                        nameof(GetSoftDeleteFilter),
+                        BindingFlags.NonPublic | BindingFlags.Static
+                    )
                     .MakeGenericMethod(entityType.ClrType);
 
                 var filter = method.Invoke(null, Array.Empty<object>());
@@ -39,7 +42,8 @@ namespace Hypesoft.Infrastructure.Extensions
             }
         }
 
-        private static LambdaExpression GetSoftDeleteFilter<TEntity>() where TEntity : class, ISoftDelete
+        private static LambdaExpression GetSoftDeleteFilter<TEntity>()
+            where TEntity : class, ISoftDelete
         {
             Expression<Func<TEntity, bool>> filter = x => !x.IsDeleted;
             return filter;

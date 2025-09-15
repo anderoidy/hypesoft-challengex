@@ -1,24 +1,41 @@
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
-using System.Text;
+using System.Security.Claims;
+using System.Security.Claims;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using Hypesoft.Application;
+using Hypesoft.Application.Commands.Categories;
+using Hypesoft.Application.Handlers.Categories;
+using Hypesoft.Domain.Entities;
+using Hypesoft.Domain.Repositories;
 using Hypesoft.Infrastructure.Configurations;
 using Hypesoft.Infrastructure.Data;
+using Hypesoft.Infrastructure.Extensions;
 using Hypesoft.Infrastructure.Middleware;
+using MediatR;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
 
 Console.WriteLine("🚀 [1] Starting application...");
 
+// Criar o builder PRIMEIRO
 var builder = WebApplication.CreateBuilder(args);
-
-Console.WriteLine("✅  Builder created successfully!");
+Console.WriteLine("✅ [2] Builder created successfully!");
 
 // Add configuration
 builder
@@ -35,6 +52,25 @@ builder.Host.UseSerilog();
 
 Console.WriteLine("📄 [4] Serilog configured!");
 
+//Add para create POST Categoria
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(CreateCategoryCommandHandler).Assembly)
+);
+
+//Add para Update
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(UpdateCategoryCommandHandler).Assembly)
+);
+
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(DeleteCategoryCommandHandler).Assembly)
+);
+
+//Add para Delete
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(DeleteCategoryCommandHandler).Assembly)
+);
+
 // Add services to the container
 builder
     .Services.AddControllers()
@@ -44,12 +80,41 @@ builder
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
 
+//Exibe exatamente o que o ModelBinder do ASP.NET não conseguiu converter
+builder
+    .Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            return new BadRequestObjectResult(context.ModelState);
+        };
+    });
+
 Console.WriteLine("🎮 [5] Controllers added!");
 
+// MediatR
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+
+// HttpClient
+builder.Services.AddHttpClient();
+
 // Add infrastructure services (inclui MongoDB e repositories)
-Console.WriteLine("⚠️   About to add Infrastructure services (MongoDB)...");
+Console.WriteLine("⚠️ [6] About to add Infrastructure services (MongoDB)...");
 builder.Services.AddInfrastructure(builder.Configuration);
 Console.WriteLine("✅ [7] Infrastructure services added!");
+
+// Add application services
+builder.Services.AddApplicationServices();
+Console.WriteLine("✅ [8] Application services added!");
+
+// Add logging detalhado para capturar erro 500
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.SetMinimumLevel(LogLevel.Debug);
+
+// Add problem details para capturar exceções
+builder.Services.AddProblemDetails();
 
 // Configure CORS
 var corsSettings = builder.Configuration.GetSection("Cors").Get<CorsSettings>();
@@ -71,12 +136,12 @@ builder.Services.AddCors(options =>
     );
 });
 
-Console.WriteLine("🌐 [8] CORS configured!");
+Console.WriteLine("🌐 [9] CORS configured!");
 
 // Add basic health checks
-Console.WriteLine("⚠️   Adding basic health checks...");
+Console.WriteLine("⚠️ [10] Adding basic health checks...");
 builder.Services.AddHealthChecks();
-Console.WriteLine("✅  Health checks added!");
+Console.WriteLine("✅ [10] Health checks added!");
 
 // Configure Swagger
 builder.Services.AddSwaggerGen(c =>
@@ -131,46 +196,156 @@ builder.Services.AddSwaggerGen(c =>
 
 Console.WriteLine("📚 [11] Swagger configured!");
 
-// Configure JWT Authentication
-var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
-if (jwtSettings != null)
-{
-    builder
-        .Services.AddAuthentication(options =>
+// Configure JWT Authentication for Keycloak
+var keycloakSettings = builder.Configuration.GetSection("Keycloak");
+builder
+    .Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = "http://localhost:8080/realms/hypesoft-realm";
+        options.Audience = "hypesoftx-api";
+        options.RequireHttpsMetadata = false;
+        options.MapInboundClaims = false;
+        //options.TokenValidationParameters = new TokenValidationParameters
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        })
-        .AddJwtBearer(options =>
+            ValidateIssuer = true,
+            ValidIssuer = "http://localhost:8080/realms/hypesoft-realm",
+            ValidateAudience = false, // teste provisório
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            RoleClaimType = "roles", // importante
+            NameClaimType = "preferred_username",
+        };
+
+        options.Events = new JwtBearerEvents
         {
-            options.TokenValidationParameters = new TokenValidationParameters
+            OnAuthenticationFailed = context =>
             {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = jwtSettings.Issuer,
-                ValidAudience = jwtSettings.Audience,
-                IssuerSigningKey = new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(jwtSettings.Key)
-                ),
-                ClockSkew = TimeSpan.Zero,
-            };
-        });
-}
+                Console.WriteLine($"🚨 JWT AUTH FAILED: {context.Exception.Message}");
+                return Task.CompletedTask;
+            },
+            OnChallenge = context =>
+            {
+                Console.WriteLine(
+                    $"🚨 JWT CHALLENGE: {context.Error} - {context.ErrorDescription}"
+                );
+                return Task.CompletedTask;
+            },
+            OnMessageReceived = context =>
+            {
+                var token = context.Request.Headers["Authorization"].ToString();
+                Console.WriteLine($"🔍 TOKEN RECEBIDO: {token}");
+                return Task.CompletedTask;
+            },
+        };
+    });
 
 Console.WriteLine("🔐 [12] JWT Authentication configured!");
 
-Console.WriteLine("⚙️   All services configured, building app...");
+builder.Services.AddScoped<IClaimsTransformation, KeycloakRolesTransformation>();
+
+Console.WriteLine("⚙️ [13] All services configured, building app...");
+
+builder.Services.AddScoped<IClaimsTransformation, KeycloakRolesTransformation>();
 
 // Build the application
 var app = builder.Build();
 
-Console.WriteLine("🏗️  [14] App built successfully!");
+Console.WriteLine("🏗️ [14] App built successfully!");
 
-// Configure the HTTP request pipeline - SWAGGER SEMPRE ATIVO
+// Middleware para capturar exceção detalhada (DEVE SER O PRIMEIRO)
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        var exceptionFeature = context.Features.Get<IExceptionHandlerPathFeature>();
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
+        if (exceptionFeature?.Error != null)
+        {
+            Console.WriteLine();
+            Console.WriteLine("🚨🚨🚨 EXCEÇÃO DETALHADA 500 🚨🚨🚨");
+            Console.WriteLine($"💥 TIPO: {exceptionFeature.Error.GetType().Name}");
+            Console.WriteLine($"📝 MENSAGEM: {exceptionFeature.Error.Message}");
+            Console.WriteLine($"📍 STACK TRACE:");
+            Console.WriteLine(exceptionFeature.Error.StackTrace);
+
+            if (exceptionFeature.Error.InnerException != null)
+            {
+                Console.WriteLine(
+                    $"🔍 INNER EXCEPTION: {exceptionFeature.Error.InnerException.Message}"
+                );
+                Console.WriteLine(
+                    $"📍 INNER STACK: {exceptionFeature.Error.InnerException.StackTrace}"
+                );
+            }
+
+            Console.WriteLine("🚨🚨🚨 FIM DA EXCEÇÃO 🚨🚨🚨");
+            Console.WriteLine();
+
+            logger.LogError(exceptionFeature.Error, "Unhandled Exception in API");
+        }
+
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = "application/json";
+
+        var problemDetails = new
+        {
+            type = "https://tools.ietf.org/html/rfc7231#section-6.6.1",
+            title = "Internal Server Error",
+            status = 500,
+            detail = exceptionFeature?.Error?.Message ?? "An unexpected error occurred.",
+            instance = context.Request.Path.ToString(),
+        };
+
+        await context.Response.WriteAsync(JsonSerializer.Serialize(problemDetails));
+    });
+});
+
+// Middleware de captura global (SEGUNDO)
+app.Use(
+    async (context, next) =>
+    {
+        Console.WriteLine($"🔥 REQUEST: {context.Request.Method} {context.Request.Path}");
+        Console.WriteLine($"📋 Query: {context.Request.QueryString}");
+        Console.WriteLine($"🌐 ContentType: {context.Request.ContentType}");
+        Console.WriteLine($"📏 ContentLength: {context.Request.ContentLength}");
+
+        try
+        {
+            await next.Invoke();
+            Console.WriteLine($"✅ RESPONSE: {context.Response.StatusCode}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🚨 EXCEÇÃO CAPTURADA GLOBALMENTE:");
+            Console.WriteLine($"📋 TIPO: {ex.GetType().Name}");
+            Console.WriteLine($"💬 MENSAGEM: {ex.Message}");
+            Console.WriteLine($"📍 STACK TRACE:");
+            Console.WriteLine(ex.StackTrace);
+
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"🔍 INNER EXCEPTION: {ex.InnerException.Message}");
+                Console.WriteLine($"📍 INNER STACK: {ex.InnerException.StackTrace}");
+            }
+
+            Console.WriteLine("========================================");
+            throw;
+        }
+
+        Console.WriteLine("----------------------------------------");
+    }
+);
+
+// Configure middleware pipeline
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+
 app.UseStaticFiles();
-app.UseDeveloperExceptionPage();
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -178,38 +353,205 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
-Console.WriteLine("🛠️  [15] Pipeline configured!");
+Console.WriteLine("🛠️ [15] Pipeline configured!");
 
-// Enable CORS
 app.UseCors("AllowSpecificOrigins");
-
-// Enable routing and authentication/authorization
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Add global exception handling middleware
-app.UseMiddleware<ExceptionHandlingMiddleware>();
-
 Console.WriteLine("🔧 [16] Middleware configured!");
+
+// Endpoints de teste (definidos antes do app.Run())
+
+//
+app.MapGet(
+        "/debug/claims",
+        (HttpContext ctx) =>
+        {
+            var roles = ctx
+                .User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role)
+                .Select(c => c.Value)
+                .ToArray();
+            var all = ctx.User.Claims.Select(c => new { c.Type, c.Value }).ToArray();
+            return Results.Ok(new { roles, all });
+        }
+    )
+    .RequireAuthorization();
+
+// 1. Teste básico
+app.MapGet(
+    "/api/test-simple",
+    () =>
+    {
+        Console.WriteLine("🔥 MINIMAL API FUNCIONANDO!");
+        return Results.Ok(new { message = "API está funcionando!", timestamp = DateTime.UtcNow });
+    }
+);
+
+// 2. Teste do ApplicationDbContext (MongoDB)
+app.MapGet(
+    "/api/test-mongodb",
+    async ([FromServices] ApplicationDbContext context) =>
+    {
+        try
+        {
+            Console.WriteLine("🔥 TESTANDO MONGODB...");
+            var productCount = await context.Products.CountAsync();
+            var categoryCount = await context.Categories.CountAsync();
+            var userCount = await context.Users.CountAsync();
+
+            Console.WriteLine(
+                $"✅ MongoDB funcionando! Products: {productCount}, Categories: {categoryCount}, Users: {userCount}"
+            );
+
+            return Results.Ok(
+                new
+                {
+                    message = "MongoDB conectado com sucesso!",
+                    database = "HypesoftDb",
+                    collections = new
+                    {
+                        products = productCount,
+                        categories = categoryCount,
+                        users = userCount,
+                    },
+                    timestamp = DateTime.UtcNow,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🚨 ERRO MONGODB: {ex.Message}");
+            return Results.Problem($"Erro MongoDB: {ex.Message}");
+        }
+    }
+);
+
+// 3. Teste do MediatR (SEM AUTENTICAÇÃO)
+app.MapGet(
+    "/api/test-mediatr",
+    async ([FromServices] IMediator mediator) =>
+    {
+        try
+        {
+            Console.WriteLine("🔥 TESTANDO MEDIATR...");
+            Console.WriteLine("✅ MediatR injetado com sucesso!");
+
+            return Results.Ok(
+                new
+                {
+                    message = "MediatR funcionando!",
+                    mediatorType = mediator.GetType().Name,
+                    timestamp = DateTime.UtcNow,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🚨 ERRO MEDIATR: {ex.Message}");
+            return Results.Problem($"Erro MediatR: {ex.Message}");
+        }
+    }
+);
+
+// 4. Teste do Repository Pattern (VERSÃO SIMPLIFICADA)
+app.MapGet(
+    "/api/test-repositories",
+    async (
+        [FromServices] IProductRepository productRepo,
+        [FromServices] ICategoryRepository categoryRepo
+    ) =>
+    {
+        try
+        {
+            Console.WriteLine("🔥 TESTANDO REPOSITORIES...");
+
+            // Verificação 1: Se os repositórios foram injetados
+            if (productRepo == null)
+            {
+                Console.WriteLine("🚨 ERRO: ProductRepository é NULL");
+                return Results.Problem("ProductRepository não foi registrado no DI");
+            }
+
+            if (categoryRepo == null)
+            {
+                Console.WriteLine("🚨 ERRO: CategoryRepository é NULL");
+                return Results.Problem("CategoryRepository não foi registrado no DI");
+            }
+
+            Console.WriteLine($"✅ Repositórios injetados com sucesso!");
+
+            // Verificação 2: Testar métodos
+            try
+            {
+                var products = await productRepo.GetAllAsync(1, 5, null);
+                var productsCount = products?.Count() ?? 0;
+                Console.WriteLine($"✅ ProductRepository retornou {productsCount} produtos");
+
+                var categories = await categoryRepo.GetAllAsync();
+                var categoriesCount = categories?.Count() ?? 0;
+                Console.WriteLine($"✅ CategoryRepository retornou {categoriesCount} categorias");
+
+                return Results.Ok(
+                    new
+                    {
+                        message = "Repositories funcionando!",
+                        productsCount = productsCount,
+                        categoriesCount = categoriesCount,
+                        timestamp = DateTime.UtcNow,
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"🚨 ERRO em métodos dos repositórios:");
+                Console.WriteLine($"   Tipo: {ex.GetType().Name}");
+                Console.WriteLine($"   Mensagem: {ex.Message}");
+                Console.WriteLine($"   Stack: {ex.StackTrace}");
+                return Results.Problem($"Erro nos repositórios: {ex.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🚨 ERRO GERAL: {ex.Message}");
+            return Results.Problem($"Erro geral: {ex.Message}");
+        }
+    }
+);
+
+// 5. Teste de Health Check
+app.MapGet(
+    "/api/test-health",
+    () =>
+    {
+        return Results.Ok(
+            new
+            {
+                status = "Healthy",
+                message = "API respondendo normalmente",
+                timestamp = DateTime.UtcNow,
+                environment = app.Environment.EnvironmentName,
+            }
+        );
+    }
+);
 
 // Map controllers and health checks
 app.MapControllers();
 app.MapHealthChecks("/health");
 
-Console.WriteLine("🛣️  [17] Endpoints mapped!");
+Console.WriteLine("🛣️ [17] Endpoints mapped!");
 
-Console.WriteLine("🌐  About to start listening...");
-
-// Configurar porta disponível
+// Configure URLs
 app.Urls.Clear();
 app.Urls.Add("http://localhost:5010");
 
-Console.WriteLine("🎯 [19] URLs configured: http://localhost:5010");
+Console.WriteLine("🎯 [18] URLs configured: http://localhost:5010");
 
 try
 {
-    Console.WriteLine("🚀  Starting Kestrel server...");
+    Console.WriteLine("🚀 [19] Starting Kestrel server...");
     app.Run();
 }
 catch (Exception ex)
@@ -217,21 +559,68 @@ catch (Exception ex)
     Console.WriteLine($"❌ [ERROR] Failed to start server: {ex.Message}");
 }
 
-Console.WriteLine("✅ [21] Server stopped successfully!");
+Console.WriteLine("✅ [20] Server stopped successfully!");
 
 // Make the Program class public for integration testing
 public partial class Program { }
 
-// Settings classes
-public class JwtSettings
-{
-    public string Key { get; set; } = string.Empty;
-    public string Issuer { get; set; } = string.Empty;
-    public string Audience { get; set; } = string.Empty;
-    public int ExpirationInMinutes { get; set; } = 60;
-}
-
 public class CorsSettings
 {
     public List<string> AllowedOrigins { get; set; } = new();
+}
+
+public class KeycloakRolesTransformation : IClaimsTransformation
+{
+    private const string ClientId = "hypesoftx-api";
+
+    public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
+    {
+        if (principal.Identity is not ClaimsIdentity identity)
+            return Task.FromResult(principal);
+
+        // Não duplica se já houver Role claims
+        if (identity.Claims.Any(c => c.Type == ClaimTypes.Role))
+            return Task.FromResult(principal);
+
+        // Client roles: resource_access.hypesoftx-api.roles
+        var resourceAccessJson = identity.FindFirst("resource_access")?.Value;
+        if (!string.IsNullOrEmpty(resourceAccessJson))
+        {
+            using var doc = JsonDocument.Parse(resourceAccessJson);
+            if (
+                doc.RootElement.TryGetProperty(ClientId, out var clientObj)
+                && clientObj.TryGetProperty("roles", out var rolesElem)
+                && rolesElem.ValueKind == JsonValueKind.Array
+            )
+            {
+                foreach (var r in rolesElem.EnumerateArray())
+                {
+                    var role = r.GetString();
+                    if (!string.IsNullOrWhiteSpace(role))
+                        identity.AddClaim(new Claim(ClaimTypes.Role, role));
+                }
+            }
+        }
+
+        // Realm roles: realm_access.roles
+        var realmAccessJson = identity.FindFirst("realm_access")?.Value;
+        if (!string.IsNullOrEmpty(realmAccessJson))
+        {
+            using var doc2 = JsonDocument.Parse(realmAccessJson);
+            if (
+                doc2.RootElement.TryGetProperty("roles", out var realmRoles)
+                && realmRoles.ValueKind == JsonValueKind.Array
+            )
+            {
+                foreach (var r in realmRoles.EnumerateArray())
+                {
+                    var role = r.GetString();
+                    if (!string.IsNullOrWhiteSpace(role))
+                        identity.AddClaim(new Claim(ClaimTypes.Role, role));
+                }
+            }
+        }
+
+        return Task.FromResult(principal);
+    }
 }

@@ -27,6 +27,9 @@ public class Product : BaseEntity, IAggregateRoot
     public Guid CategoryId { get; set; }
     public virtual Category? Category { get; set; }
 
+    // ✅ INICIALIZAR COLEÇÕES PARA EVITAR NULL:
+    public virtual ICollection<Category> Categories { get; private set; } = new List<Category>();
+
     protected Product() { } // For EF Core
 
     public Product(

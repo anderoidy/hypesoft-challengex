@@ -1,6 +1,6 @@
+using System.ComponentModel.DataAnnotations;
 using Ardalis.Result;
 using MediatR;
-using System.ComponentModel.DataAnnotations;
 
 namespace Hypesoft.Application.Commands.Categories
 {
@@ -24,7 +24,8 @@ namespace Hypesoft.Application.Commands.Categories
             string name,
             string? description = null,
             bool isActive = true,
-            string? createdBy = null)
+            string? createdBy = null
+        )
         {
             Name = name;
             Description = description;

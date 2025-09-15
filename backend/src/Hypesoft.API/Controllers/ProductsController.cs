@@ -17,7 +17,7 @@ namespace Hypesoft.API.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    [Authorize]
+    //[Authorize]
     public class ProductsController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -93,11 +93,11 @@ namespace Hypesoft.API.Controllers
         }
 
         /// <summary>
-        /// Cria um novo produto
+        /// Cria um novo produto1
         /// </summary>
         /// <param name="command">Dados do produto</param>
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        // [Authorize(Roles = "products-create")] // Mantenha comentado por enquanto
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -105,26 +105,70 @@ namespace Hypesoft.API.Controllers
         {
             try
             {
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
+                _logger.LogInformation("=== INÍCIO CREATE PRODUCT ===");
+                _logger.LogInformation("Command recebido: {@Command}", command);
 
+                if (command == null)
+                {
+                    _logger.LogError("Command é null!");
+                    return BadRequest("Dados do produto não fornecidos");
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("ModelState inválido: {@ModelState}", ModelState);
+                    return BadRequest(ModelState);
+                }
+
+                _logger.LogInformation("Enviando command para MediatR...");
                 var result = await _mediator.Send(command);
 
+                _logger.LogInformation(
+                    "Resultado recebido: Status={Status}, Value={Value}",
+                    result.Status,
+                    result.Value
+                );
+
                 if (result.Status == ResultStatus.Invalid)
+                {
+                    _logger.LogWarning(
+                        "Validação falhou: {@ValidationErrors}",
+                        result.ValidationErrors
+                    );
                     return BadRequest(result.ValidationErrors);
+                }
 
                 if (result.Status == ResultStatus.NotFound)
+                {
+                    _logger.LogWarning("Categoria não encontrada");
                     return NotFound("Categoria não encontrada");
+                }
 
-                return CreatedAtAction(
-                    nameof(GetById),
-                    new { id = result.Value },
-                    new { id = result.Value }
-                );
+                if (result.IsSuccess)
+                {
+                    _logger.LogInformation("Produto criado com sucesso: {ProductId}", result.Value);
+                    return CreatedAtAction(
+                        nameof(GetById),
+                        new { id = result.Value },
+                        new { id = result.Value }
+                    );
+                }
+
+                _logger.LogError("Resultado inesperado: {@Result}", result);
+                return StatusCode(500, "Resultado inesperado ao criar produto");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao criar produto");
+                _logger.LogError(ex, "=== ERRO CRÍTICO AO CRIAR PRODUTO ===");
+                _logger.LogError("Tipo da exceção: {ExceptionType}", ex.GetType().Name);
+                _logger.LogError("Mensagem: {Message}", ex.Message);
+                _logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
+
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError("Inner exception: {InnerMessage}", ex.InnerException.Message);
+                }
+
                 return StatusCode(
                     StatusCodes.Status500InternalServerError,
                     "Ocorreu um erro ao criar o produto"

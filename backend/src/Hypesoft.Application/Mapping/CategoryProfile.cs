@@ -9,7 +9,10 @@ public class CategoryProfile : Profile
     public CategoryProfile()
     {
         CreateMap<Category, CategoryDto>()
-            .ForMember(dest => dest.ParentCategoryName, opt => 
-                opt.MapFrom(src => src.ParentCategory != null ? src.ParentCategory.Name : null));
+            .ForMember(
+                dest => dest.ParentCategoryName,
+                opt =>
+                    opt.MapFrom(src => src.ParentCategory != null ? src.ParentCategory.Name : null)
+            );
     }
 }
