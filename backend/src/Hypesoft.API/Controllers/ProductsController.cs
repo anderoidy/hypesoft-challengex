@@ -182,7 +182,7 @@ namespace Hypesoft.API.Controllers
         /// <param name="id">ID do produto</param>
         /// <param name="command">Dados atualizados do produto</param>
         [HttpPut("{id:guid}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "products-update")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -222,7 +222,7 @@ namespace Hypesoft.API.Controllers
         /// </summary>
         /// <param name="id">ID do produto a ser removido</param>
         [HttpDelete("{id:guid}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "products-delete")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]

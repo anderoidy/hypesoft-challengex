@@ -3,12 +3,14 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Security.Claims;
-using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Hypesoft.Application;
 using Hypesoft.Application.Commands.Categories;
+using Hypesoft.Application.Commands.Products;
 using Hypesoft.Application.Handlers.Categories;
+using Hypesoft.Application.Handlers.Products;
+using Hypesoft.Application.Mapping;
 using Hypesoft.Domain.Entities;
 using Hypesoft.Domain.Repositories;
 using Hypesoft.Infrastructure.Configurations;
@@ -17,10 +19,10 @@ using Hypesoft.Infrastructure.Extensions;
 using Hypesoft.Infrastructure.Middleware;
 using MediatR;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -33,11 +35,11 @@ using Serilog;
 
 Console.WriteLine("🚀 [1] Starting application...");
 
-// Criar o builder PRIMEIRO
+// Criar o builder
 var builder = WebApplication.CreateBuilder(args);
 Console.WriteLine("✅ [2] Builder created successfully!");
 
-// Add configuration
+// Configuração
 builder
     .Configuration.SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
@@ -49,74 +51,64 @@ Console.WriteLine("📋 [3] Configuration loaded!");
 // Configure Serilog
 Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(builder.Configuration).CreateLogger();
 builder.Host.UseSerilog();
-
 Console.WriteLine("📄 [4] Serilog configured!");
 
-//Add para create POST Categoria
+// ===========================================
+// ✅ MEDIATR - CONFIGURAÇÃO ÚNICA E LIMPA
+// ===========================================
 builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(CreateCategoryCommandHandler).Assembly)
-);
+{
+    // Registra TODOS os handlers de TODAS as assemblies necessárias
+    cfg.RegisterServicesFromAssemblies(
+        typeof(CreateCategoryCommandHandler).Assembly, // Assembly dos handlers de Category
+        typeof(CreateProductCommandHandler).Assembly, // Assembly dos handlers de Product
+        typeof(Program).Assembly // Assembly atual (se necessário)
+    );
+});
+Console.WriteLine("🎯 [5] MediatR configured with ALL handlers!");
 
-//Add para Update
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(UpdateCategoryCommandHandler).Assembly)
-);
-
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(DeleteCategoryCommandHandler).Assembly)
-);
-
-//Add para Delete
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(DeleteCategoryCommandHandler).Assembly)
-);
-
-// Add services to the container
+// Controllers
 builder
     .Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-    });
-
-//Exibe exatamente o que o ModelBinder do ASP.NET não conseguiu converter
-builder
-    .Services.AddControllers()
+    })
     .ConfigureApiBehaviorOptions(options =>
     {
-        options.InvalidModelStateResponseFactory = context =>
-        {
-            return new BadRequestObjectResult(context.ModelState);
-        };
+        options.InvalidModelStateResponseFactory = context => new BadRequestObjectResult(
+            context.ModelState
+        );
     });
 
-Console.WriteLine("🎮 [5] Controllers added!");
-
-// MediatR
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+Console.WriteLine("🎮 [6] Controllers added!");
 
 // HttpClient
 builder.Services.AddHttpClient();
 
-// Add infrastructure services (inclui MongoDB e repositories)
-Console.WriteLine("⚠️ [6] About to add Infrastructure services (MongoDB)...");
+// Infrastructure services (MongoDB e repositories)
+Console.WriteLine("⚠️ [7] About to add Infrastructure services (MongoDB)...");
 builder.Services.AddInfrastructure(builder.Configuration);
-Console.WriteLine("✅ [7] Infrastructure services added!");
+Console.WriteLine("✅ [8] Infrastructure services added!");
 
-// Add application services
+// Application services
 builder.Services.AddApplicationServices();
-Console.WriteLine("✅ [8] Application services added!");
+Console.WriteLine("✅ [9] Application services added!");
 
-// Add logging detalhado para capturar erro 500
+// AutoMapper
+builder.Services.AddAutoMapper(typeof(ProductProfile).Assembly);
+Console.WriteLine("✅ [10] AutoMapper configured!");
+
+// Logging detalhado
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
-// Add problem details para capturar exceções
+// Problem details para exceções
 builder.Services.AddProblemDetails();
 
-// Configure CORS
+// CORS
 var corsSettings = builder.Configuration.GetSection("Cors").Get<CorsSettings>();
 builder.Services.AddCors(options =>
 {
@@ -136,14 +128,13 @@ builder.Services.AddCors(options =>
     );
 });
 
-Console.WriteLine("🌐 [9] CORS configured!");
+Console.WriteLine("🌐 [11] CORS configured!");
 
-// Add basic health checks
-Console.WriteLine("⚠️ [10] Adding basic health checks...");
+// Health checks
 builder.Services.AddHealthChecks();
-Console.WriteLine("✅ [10] Health checks added!");
+Console.WriteLine("✅ [12] Health checks added!");
 
-// Configure Swagger
+// Swagger
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc(
@@ -162,7 +153,7 @@ builder.Services.AddSwaggerGen(c =>
         }
     );
 
-    // Add JWT Authentication to Swagger
+    // JWT Authentication para Swagger
     var securityScheme = new OpenApiSecurityScheme
     {
         Name = "JWT Authentication",
@@ -183,7 +174,7 @@ builder.Services.AddSwaggerGen(c =>
         new OpenApiSecurityRequirement { { securityScheme, Array.Empty<string>() } }
     );
 
-    // Enable XML comments for Swagger
+    // XML comments
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     if (File.Exists(xmlPath))
@@ -194,10 +185,9 @@ builder.Services.AddSwaggerGen(c =>
     c.EnableAnnotations();
 });
 
-Console.WriteLine("📚 [11] Swagger configured!");
+Console.WriteLine("📚 [13] Swagger configured!");
 
-// Configure JWT Authentication for Keycloak
-var keycloakSettings = builder.Configuration.GetSection("Keycloak");
+// JWT Authentication
 builder
     .Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -206,15 +196,15 @@ builder
         options.Audience = "hypesoftx-api";
         options.RequireHttpsMetadata = false;
         options.MapInboundClaims = false;
-        //options.TokenValidationParameters = new TokenValidationParameters
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidIssuer = "http://localhost:8080/realms/hypesoft-realm",
-            ValidateAudience = false, // teste provisório
+            ValidateAudience = false,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            RoleClaimType = "roles", // importante
+            RoleClaimType = "roles",
             NameClaimType = "preferred_username",
         };
 
@@ -241,20 +231,18 @@ builder
         };
     });
 
-Console.WriteLine("🔐 [12] JWT Authentication configured!");
+Console.WriteLine("🔐 [14] JWT Authentication configured!");
 
+// Claims transformation
 builder.Services.AddScoped<IClaimsTransformation, KeycloakRolesTransformation>();
 
-Console.WriteLine("⚙️ [13] All services configured, building app...");
+Console.WriteLine("⚙️ [15] All services configured, building app...");
 
-builder.Services.AddScoped<IClaimsTransformation, KeycloakRolesTransformation>();
-
-// Build the application
+// Build da aplicação
 var app = builder.Build();
+Console.WriteLine("🏗️ [16] App built successfully!");
 
-Console.WriteLine("🏗️ [14] App built successfully!");
-
-// Middleware para capturar exceção detalhada (DEVE SER O PRIMEIRO)
+// Exception handling middleware (PRIMEIRO)
 app.UseExceptionHandler(errorApp =>
 {
     errorApp.Run(async context =>
@@ -303,7 +291,7 @@ app.UseExceptionHandler(errorApp =>
     });
 });
 
-// Middleware de captura global (SEGUNDO)
+// Request/Response logging middleware
 app.Use(
     async (context, next) =>
     {
@@ -322,13 +310,11 @@ app.Use(
             Console.WriteLine($"🚨 EXCEÇÃO CAPTURADA GLOBALMENTE:");
             Console.WriteLine($"📋 TIPO: {ex.GetType().Name}");
             Console.WriteLine($"💬 MENSAGEM: {ex.Message}");
-            Console.WriteLine($"📍 STACK TRACE:");
-            Console.WriteLine(ex.StackTrace);
+            Console.WriteLine($"📍 STACK TRACE: {ex.StackTrace}");
 
             if (ex.InnerException != null)
             {
                 Console.WriteLine($"🔍 INNER EXCEPTION: {ex.InnerException.Message}");
-                Console.WriteLine($"📍 INNER STACK: {ex.InnerException.StackTrace}");
             }
 
             Console.WriteLine("========================================");
@@ -339,7 +325,7 @@ app.Use(
     }
 );
 
-// Configure middleware pipeline
+// Pipeline configuration
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -353,24 +339,25 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
-Console.WriteLine("🛠️ [15] Pipeline configured!");
+Console.WriteLine("🛠️ [17] Pipeline configured!");
 
 app.UseCors("AllowSpecificOrigins");
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-Console.WriteLine("🔧 [16] Middleware configured!");
+Console.WriteLine("🔧 [18] Middleware configured!");
 
-// Endpoints de teste (definidos antes do app.Run())
+// ===============================================
+// 🧪 ENDPOINTS DE TESTE (mantidos para debug)
+// ===============================================
 
-//
 app.MapGet(
         "/debug/claims",
         (HttpContext ctx) =>
         {
             var roles = ctx
-                .User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role)
+                .User.Claims.Where(c => c.Type == ClaimTypes.Role)
                 .Select(c => c.Value)
                 .ToArray();
             var all = ctx.User.Claims.Select(c => new { c.Type, c.Value }).ToArray();
@@ -379,7 +366,6 @@ app.MapGet(
     )
     .RequireAuthorization();
 
-// 1. Teste básico
 app.MapGet(
     "/api/test-simple",
     () =>
@@ -389,7 +375,6 @@ app.MapGet(
     }
 );
 
-// 2. Teste do ApplicationDbContext (MongoDB)
 app.MapGet(
     "/api/test-mongodb",
     async ([FromServices] ApplicationDbContext context) =>
@@ -428,7 +413,6 @@ app.MapGet(
     }
 );
 
-// 3. Teste do MediatR (SEM AUTENTICAÇÃO)
 app.MapGet(
     "/api/test-mediatr",
     async ([FromServices] IMediator mediator) =>
@@ -455,7 +439,6 @@ app.MapGet(
     }
 );
 
-// 4. Teste do Repository Pattern (VERSÃO SIMPLIFICADA)
 app.MapGet(
     "/api/test-repositories",
     async (
@@ -467,7 +450,6 @@ app.MapGet(
         {
             Console.WriteLine("🔥 TESTANDO REPOSITORIES...");
 
-            // Verificação 1: Se os repositórios foram injetados
             if (productRepo == null)
             {
                 Console.WriteLine("🚨 ERRO: ProductRepository é NULL");
@@ -480,47 +462,34 @@ app.MapGet(
                 return Results.Problem("CategoryRepository não foi registrado no DI");
             }
 
-            Console.WriteLine($"✅ Repositórios injetados com sucesso!");
+            Console.WriteLine("✅ Repositórios injetados com sucesso!");
 
-            // Verificação 2: Testar métodos
-            try
-            {
-                var products = await productRepo.GetAllAsync(1, 5, null);
-                var productsCount = products?.Count() ?? 0;
-                Console.WriteLine($"✅ ProductRepository retornou {productsCount} produtos");
+            var products = await productRepo.GetAllAsync(1, 5, null);
+            var productsCount = products?.Count() ?? 0;
+            Console.WriteLine($"✅ ProductRepository retornou {productsCount} produtos");
 
-                var categories = await categoryRepo.GetAllAsync();
-                var categoriesCount = categories?.Count() ?? 0;
-                Console.WriteLine($"✅ CategoryRepository retornou {categoriesCount} categorias");
+            var categories = await categoryRepo.GetAllAsync();
+            var categoriesCount = categories?.Count() ?? 0;
+            Console.WriteLine($"✅ CategoryRepository retornou {categoriesCount} categorias");
 
-                return Results.Ok(
-                    new
-                    {
-                        message = "Repositories funcionando!",
-                        productsCount = productsCount,
-                        categoriesCount = categoriesCount,
-                        timestamp = DateTime.UtcNow,
-                    }
-                );
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"🚨 ERRO em métodos dos repositórios:");
-                Console.WriteLine($"   Tipo: {ex.GetType().Name}");
-                Console.WriteLine($"   Mensagem: {ex.Message}");
-                Console.WriteLine($"   Stack: {ex.StackTrace}");
-                return Results.Problem($"Erro nos repositórios: {ex.Message}");
-            }
+            return Results.Ok(
+                new
+                {
+                    message = "Repositories funcionando!",
+                    productsCount,
+                    categoriesCount,
+                    timestamp = DateTime.UtcNow,
+                }
+            );
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"🚨 ERRO GERAL: {ex.Message}");
-            return Results.Problem($"Erro geral: {ex.Message}");
+            Console.WriteLine($"🚨 ERRO em métodos dos repositórios: {ex.Message}");
+            return Results.Problem($"Erro nos repositórios: {ex.Message}");
         }
     }
 );
 
-// 5. Teste de Health Check
 app.MapGet(
     "/api/test-health",
     () =>
@@ -537,21 +506,122 @@ app.MapGet(
     }
 );
 
-// Map controllers and health checks
+// 6. Teste específico do CreateProductCommand
+app.MapPost(
+    "/api/test-create-product-command",
+    async ([FromServices] IMediator mediator) =>
+    {
+        try
+        {
+            Console.WriteLine("🔥 TESTANDO CreateProductCommand...");
+
+            // ✅ CORREÇÃO: Use object initializer sem construtor com parâmetros
+            var command = new CreateProductCommand(
+                "Teste Produto", // Name (obrigatório)
+                "Produto de teste", // Description (obrigatório)
+                100.00m, // Price (obrigatório)
+                Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6"), // CategoryId (obrigatório)
+                "TEST-001", // Sku (opcional)
+                "123456789", // Barcode (opcional)
+                90.00m, // DiscountPrice (opcional)
+                10, // StockQuantity (opcional)
+                "https://example.com/image.jpg", // ImageUrl (opcional)
+                true, // IsFeatured (opcional)
+                true, // IsPublished (opcional)
+                "admin" // CreatedBy (opcional)
+            );
+
+            Console.WriteLine("✅ Command criado, enviando via MediatR...");
+            var result = await mediator.Send(command);
+            Console.WriteLine($"✅ Resultado: {result}");
+
+            return Results.Ok(
+                new
+                {
+                    message = "CreateProductCommand funcionou!",
+                    result = result,
+                    timestamp = DateTime.UtcNow,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🚨 ERRO CreateProductCommand: {ex.Message}");
+            Console.WriteLine($"🚨 STACK: {ex.StackTrace}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"🚨 INNER: {ex.InnerException.Message}");
+            }
+            return Results.Problem($"Erro CreateProductCommand: {ex.Message}");
+        }
+    }
+);
+
+// 6. Teste específico do CreateProductCommand
+app.MapPost(
+    "/api/test-create-product-command",
+    async ([FromServices] IMediator mediator) =>
+    {
+        try
+        {
+            Console.WriteLine("🔥 TESTANDO CreateProductCommand...");
+
+            // ✅ CORREÇÃO: Use o construtor com APENAS os parâmetros obrigatórios
+            var command = new CreateProductCommand(
+                Name: "Teste Produto", // string Name (obrigatório)
+                Description: "Produto de teste", // string? Description (obrigatório)
+                Price: 100.00m, // decimal Price (obrigatório)
+                CategoryId: Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6"), // Guid CategoryId (obrigatório)
+                Sku: "TEST-001", // string? Sku (opcional)
+                Barcode: "123456789", // string? Barcode (opcional)
+                DiscountPrice: 90.00m, // decimal? DiscountPrice (opcional)
+                StockQuantity: 10, // int StockQuantity (opcional)
+                ImageUrl: "https://example.com/image.jpg", // string? ImageUrl (opcional)
+                IsFeatured: true, // bool IsFeatured (opcional)
+                IsPublished: true, // bool IsPublished (opcional)
+                CreatedBy: "admin" // string? CreatedBy (opcional)
+            );
+
+            Console.WriteLine("✅ Command criado, enviando via MediatR...");
+            var result = await mediator.Send(command);
+            Console.WriteLine($"✅ Resultado: {result}");
+
+            return Results.Ok(
+                new
+                {
+                    message = "CreateProductCommand funcionou!",
+                    result = result,
+                    timestamp = DateTime.UtcNow,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🚨 ERRO CreateProductCommand: {ex.Message}");
+            Console.WriteLine($"🚨 STACK: {ex.StackTrace}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"🚨 INNER: {ex.InnerException.Message}");
+            }
+            return Results.Problem($"Erro CreateProductCommand: {ex.Message}");
+        }
+    }
+);
+
+// Map controllers e health checks
 app.MapControllers();
 app.MapHealthChecks("/health");
 
-Console.WriteLine("🛣️ [17] Endpoints mapped!");
+Console.WriteLine("🛣️ [19] Endpoints mapped!");
 
-// Configure URLs
+// URLs
 app.Urls.Clear();
 app.Urls.Add("http://localhost:5010");
-
-Console.WriteLine("🎯 [18] URLs configured: http://localhost:5010");
+Console.WriteLine("🎯 [20] URLs configured: http://localhost:5010");
 
 try
 {
-    Console.WriteLine("🚀 [19] Starting Kestrel server...");
+    Console.WriteLine("🚀 [21] Starting Kestrel server...");
     app.Run();
 }
 catch (Exception ex)
@@ -559,9 +629,8 @@ catch (Exception ex)
     Console.WriteLine($"❌ [ERROR] Failed to start server: {ex.Message}");
 }
 
-Console.WriteLine("✅ [20] Server stopped successfully!");
+Console.WriteLine("✅ [22] Server stopped successfully!");
 
-// Make the Program class public for integration testing
 public partial class Program { }
 
 public class CorsSettings
@@ -578,7 +647,6 @@ public class KeycloakRolesTransformation : IClaimsTransformation
         if (principal.Identity is not ClaimsIdentity identity)
             return Task.FromResult(principal);
 
-        // Não duplica se já houver Role claims
         if (identity.Claims.Any(c => c.Type == ClaimTypes.Role))
             return Task.FromResult(principal);
 

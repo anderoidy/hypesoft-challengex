@@ -2,9 +2,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Result;
-using Ardalis.Specification.EntityFrameworkCore;
 using Hypesoft.Application.Commands.Products;
 using Hypesoft.Domain.Entities;
+using Hypesoft.Domain.Repositories;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -12,16 +12,15 @@ namespace Hypesoft.Application.Handlers.Products
 {
     public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand, Result<bool>>
     {
-        private readonly RepositoryBase<Product> _productRepository;
+        private readonly IProductRepository _productRepository;
         private readonly ILogger<DeleteProductCommandHandler> _logger;
 
         public DeleteProductCommandHandler(
-            RepositoryBase<Product> productRepository,
+            IProductRepository productRepository,
             ILogger<DeleteProductCommandHandler> logger
         )
         {
-            _productRepository =
-                productRepository ?? throw new ArgumentNullException(nameof(productRepository));
+            _productRepository = productRepository ?? throw new ArgumentNullException(nameof(productRepository));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -37,7 +36,7 @@ namespace Hypesoft.Application.Handlers.Products
                     request.Id
                 );
 
-                var product = await _productRepository.GetByIdAsync(request.Id, cancellationToken);
+                var product = await _productRepository.GetByIdAsync(request.Id);
 
                 if (product == null)
                 {
@@ -45,7 +44,7 @@ namespace Hypesoft.Application.Handlers.Products
                     return Result<bool>.NotFound($"Product with ID {request.Id} not found.");
                 }
 
-                await _productRepository.DeleteAsync(product, cancellationToken);
+                await _productRepository.DeleteAsync(request.Id);
 
                 _logger.LogInformation(
                     "Successfully deleted product with ID: {ProductId}",

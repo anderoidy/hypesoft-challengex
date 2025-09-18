@@ -2,10 +2,10 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Result;
-using Ardalis.Specification.EntityFrameworkCore;
 using Hypesoft.Application.DTOs;
 using Hypesoft.Application.Queries.Products;
 using Hypesoft.Domain.Entities;
+using Hypesoft.Domain.Repositories;
 using MediatR;
 
 namespace Hypesoft.Application.Handlers.Products
@@ -13,9 +13,10 @@ namespace Hypesoft.Application.Handlers.Products
     public class GetProductByIdQueryHandler
         : IRequestHandler<GetProductByIdQuery, Result<ProductDto>>
     {
-        private readonly RepositoryBase<Product> _productRepository;
+        private readonly IProductRepository _productRepository;
 
-        public GetProductByIdQueryHandler(RepositoryBase<Product> productRepository)
+        // ✅ CORREÇÃO: Construtor deve receber IProductRepository
+        public GetProductByIdQueryHandler(IProductRepository productRepository)
         {
             _productRepository =
                 productRepository ?? throw new ArgumentNullException(nameof(productRepository));
@@ -26,10 +27,11 @@ namespace Hypesoft.Application.Handlers.Products
             CancellationToken cancellationToken
         )
         {
-            var product = await _productRepository.GetByIdAsync(request.Id, cancellationToken);
+            // ✅ CORREÇÃO: Remover cancellationToken se sua interface não tiver
+            var product = await _productRepository.GetByIdAsync(request.Id);
 
             if (product == null)
-                return Result.NotFound("Product not found");
+                return Result<ProductDto>.NotFound("Product not found");
 
             var productDto = new ProductDto(
                 Id: product.Id,
@@ -48,7 +50,7 @@ namespace Hypesoft.Application.Handlers.Products
                 CategoryName: product.Category?.Name
             );
 
-            return Result.Success(productDto);
+            return Result<ProductDto>.Success(productDto);
         }
     }
 }

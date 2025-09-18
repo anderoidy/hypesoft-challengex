@@ -8,6 +8,7 @@ using AutoMapper;
 using Hypesoft.Application.Commands.Products;
 using Hypesoft.Application.DTOs;
 using Hypesoft.Domain.Entities;
+using Hypesoft.Domain.Repositories;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -16,14 +17,14 @@ namespace Hypesoft.Application.Handlers.Products
     public class UpdateProductCommandHandler
         : IRequestHandler<UpdateProductCommand, Result<ProductDto>>
     {
-        private readonly RepositoryBase<Product> _productRepository;
-        private readonly RepositoryBase<Category> _categoryRepository;
+        private readonly IProductRepository _productRepository; // ✅ Use interface
+        private readonly ICategoryRepository _categoryRepository; // ✅ Use interface
         private readonly IMapper _mapper;
         private readonly ILogger<UpdateProductCommandHandler> _logger;
 
         public UpdateProductCommandHandler(
-            RepositoryBase<Product> productRepository,
-            RepositoryBase<Category> categoryRepository,
+            IProductRepository productRepository, // ← Mudar aqui
+            ICategoryRepository categoryRepository, // ← Mudar aqui
             IMapper mapper,
             ILogger<UpdateProductCommandHandler> logger
         )
@@ -46,10 +47,7 @@ namespace Hypesoft.Application.Handlers.Products
                 _logger.LogInformation("Updating product with ID {ProductId}", request.Id);
 
                 // Get existing product
-                var existingProduct = await _productRepository.GetByIdAsync(
-                    request.Id,
-                    cancellationToken
-                );
+                var existingProduct = await _productRepository.GetByIdAsync(request.Id);
                 if (existingProduct == null)
                 {
                     _logger.LogWarning(
@@ -78,7 +76,7 @@ namespace Hypesoft.Application.Handlers.Products
                 // Check SKU uniqueness if provided
                 if (!string.IsNullOrEmpty(request.Sku))
                 {
-                    var allProducts = await _productRepository.ListAsync(cancellationToken);
+                    var allProducts = await _productRepository.GetAllAsync(1, 1000, null);
                     var skuExists = allProducts.Any(p =>
                         p.Sku == request.Sku && p.Id != request.Id
                     );
@@ -97,7 +95,7 @@ namespace Hypesoft.Application.Handlers.Products
                 existingProduct.UpdatedAt = DateTime.UtcNow;
 
                 // Update product
-                await _productRepository.UpdateAsync(existingProduct, cancellationToken);
+                await _productRepository.UpdateAsync(existingProduct);
 
                 // Map to DTO for response
                 var updatedProductDto = _mapper.Map<ProductDto>(existingProduct);

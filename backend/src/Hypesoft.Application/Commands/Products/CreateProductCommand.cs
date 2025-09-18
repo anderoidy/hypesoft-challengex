@@ -17,10 +17,6 @@ namespace Hypesoft.Application.Commands.Products
         decimal? DiscountPrice = null,
         int StockQuantity = 0,
         string? ImageUrl = null,
-        float? Weight = null,
-        float? Height = null,
-        float? Width = null,
-        float? Length = null,
         bool IsFeatured = false,
         bool IsPublished = false,
         string? CreatedBy = null  // ✅ Mudança: UserId → CreatedBy
