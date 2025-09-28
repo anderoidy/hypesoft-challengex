@@ -6,11 +6,14 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Hypesoft.Domain\Hypesoft.Domain.csproj" />
+    <ProjectReference Include="..\Hypesoft.Application\Hypesoft.Application.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Ardalis.Result" Version="10.1.0" />
     <PackageReference Include="Ardalis.Specification.EntityFrameworkCore" Version="9.2.0" />
     <PackageReference Include="Ardalis.Result.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="itext7" Version="8.0.2" />
+    <PackageReference Include="itext7.pdfhtml" Version="5.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.8" />

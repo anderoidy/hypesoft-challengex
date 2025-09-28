@@ -1,14 +1,16 @@
 import { ToastProvider } from '@radix-ui/react-toast';
 import type { AppProps } from 'next/app';
-//import '../styles/globals.css'; // ajuste o caminho conforme necessário
+import { AuthProvider } from '@/contexts/AuthContext';
 
-import '../app/globals.css'; // ajuste o caminho conforme necessário
+import '../app/globals.css';
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
-    <ToastProvider>
-      <Component {...pageProps} />
-    </ToastProvider>
+    <AuthProvider>
+      <ToastProvider>
+        <Component {...pageProps} />
+      </ToastProvider>
+    </AuthProvider>
   );
 }
 

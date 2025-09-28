@@ -69,8 +69,10 @@ namespace Hypesoft.Infrastructure.Repositories
             CancellationToken cancellationToken = default
         )
         {
-            entity.CreatedAt = DateTime.UtcNow;
-            entity.SetUpdatedAt(DateTime.UtcNow);
+            // Auditoria correta (CreatedAt, UpdatedAt, LastModifiedBy)
+            entity.SetCreated(
+                string.IsNullOrWhiteSpace(entity.CreatedBy) ? "system" : entity.CreatedBy
+            );
 
             await _context.Users.AddAsync(entity, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
@@ -82,7 +84,7 @@ namespace Hypesoft.Infrastructure.Repositories
             CancellationToken cancellationToken = default
         )
         {
-            entity.SetUpdatedAt(DateTime.UtcNow);
+            entity.SetLastModifiedBy(entity.LastModifiedBy ?? "system");
             _context.Users.Update(entity);
             await _context.SaveChangesAsync(cancellationToken);
             return entity;

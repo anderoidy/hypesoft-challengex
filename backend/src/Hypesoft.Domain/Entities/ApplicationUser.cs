@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Hypesoft.Domain.Common.Interfaces;
-using Hypesoft.Domain.Interfaces;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace Hypesoft.Domain.Entities
@@ -12,7 +11,7 @@ namespace Hypesoft.Domain.Entities
         [BsonId]
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        // ✅ IDENTITY PROPERTIES (MANTIDOS):
+        // Identity-like props
         public string? UserName { get; set; }
         public string? NormalizedUserName { get; set; }
         public string? Email { get; set; }
@@ -28,33 +27,38 @@ namespace Hypesoft.Domain.Entities
         public bool LockoutEnabled { get; set; }
         public int AccessFailedCount { get; set; }
 
-        // ✅ CUSTOM PROPERTIES (MANTIDOS):
+        // Custom
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
-        public bool IsActive { get; set; } = true;
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime? LastLoginAt { get; set; }
-        public string? CreatedBy { get; set; }
+        public bool IsActive { get; private set; } = true;
+        public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
+        public DateTime? LastLoginAt { get; private set; }
+        public string? CreatedBy { get; private set; }
         public DateTime? UpdatedAt { get; private set; }
         public string? LastModifiedBy { get; private set; }
         public bool IsDeleted { get; private set; }
 
-        // ✅ NAVIGATION PROPERTIES (AJUSTES MENORES):
+        // Roles simples em Mongo
         [BsonElement("UserRoles")]
         public ICollection<string> RoleIds { get; set; } = new List<string>();
 
-        [BsonIgnore] // ✅ Importante para MongoDB
+        [BsonIgnore]
         public virtual ICollection<ApplicationUserRole> UserRoles { get; set; } = new List<ApplicationUserRole>();
 
-        // ✅ COMPUTED PROPERTY (NOVO):
+        // Computed
         [BsonIgnore]
         public string FullName => $"{FirstName} {LastName}".Trim();
 
-        // ✅ AUDIT METHODS (MANTIDOS - ESTÃO PERFEITOS):
-        public void SetUpdatedAt(DateTime updatedAt)
+        // Audit helpers
+        public void SetCreated(string createdBy)
         {
-            UpdatedAt = updatedAt;
+            CreatedBy = string.IsNullOrWhiteSpace(createdBy) ? "system" : createdBy;
+            CreatedAt = DateTime.UtcNow;
+            UpdatedAt = CreatedAt;
+            LastModifiedBy = CreatedBy;
         }
+
+        public void SetUpdatedAt(DateTime updatedAt) => UpdatedAt = updatedAt;
 
         public void SetLastModifiedBy(string userId, DateTime? modifiedAt = null)
         {
@@ -68,10 +72,9 @@ namespace Hypesoft.Domain.Entities
         public void MarkAsDeleted(string deletedBy)
         {
             IsDeleted = true;
-            SetLastModifiedBy(deletedBy);
+            SetLastModifiedBy(string.IsNullOrWhiteSpace(deletedBy) ? "system" : deletedBy);
         }
 
-        // ✅ MÉTODOS UTILITÁRIOS ADICIONAIS:
         public void SetLastLogin(DateTime loginTime)
         {
             LastLoginAt = loginTime;
@@ -81,13 +84,13 @@ namespace Hypesoft.Domain.Entities
         public void ActivateUser(string activatedBy)
         {
             IsActive = true;
-            SetLastModifiedBy(activatedBy);
+            SetLastModifiedBy(string.IsNullOrWhiteSpace(activatedBy) ? "system" : activatedBy);
         }
 
         public void DeactivateUser(string deactivatedBy)
         {
             IsActive = false;
-            SetLastModifiedBy(deactivatedBy);
+            SetLastModifiedBy(string.IsNullOrWhiteSpace(deactivatedBy) ? "system" : deactivatedBy);
         }
     }
 }

@@ -163,8 +163,8 @@ MONGODB_APP_USER="${APP_USER}"
 MONGODB_APP_PASSWORD="${APP_PASSWORD}"
 
 # Connection Strings
-MONGODB_CONNECTION_STRING="mongodb://${APP_USER}:${APP_PASSWORD}@localhost:27017/${APP_DB}?authSource=admin&tls=true"
-MONGODB_ADMIN_CONNECTION_STRING="mongodb://${ADMIN_USER}:${ADMIN_PASSWORD}@localhost:27017/admin?tls=true"
+MONGODB_CONNECTION_STRING="mongodb://${APP_USER}:${APP_PASSWORD}@mongodb:27017/${APP_DB}?authSource=admin&tls=true"
+MONGODB_ADMIN_CONNECTION_STRING="mongodb://${ADMIN_USER}:${ADMIN_PASSWORD}@mongodb:27017/admin?tls=true"
 EOL
     
     # Secure the credentials file

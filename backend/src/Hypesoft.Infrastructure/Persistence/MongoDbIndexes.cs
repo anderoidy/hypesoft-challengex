@@ -21,7 +21,7 @@ namespace Hypesoft.Infrastructure.Persistence
             await CreateCategoryIndexes(database);
         }
 
-        private static async Task CreateUserIndexes(IMongoDatabase database)
+        private static async Task CreateUserIndexes(IMongoDatabase database)    
         {
             var collection = database.GetCollection<ApplicationUser>("users");
             var indexKeys = Builders<ApplicationUser>

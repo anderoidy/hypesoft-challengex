@@ -141,7 +141,7 @@ namespace Hypesoft.API.Controllers
         /// <param name="id">ID da categoria</param>
         /// <param name="command">Dados atualizados da categoria</param>
         [HttpPut("{id:guid}")]
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -181,7 +181,7 @@ namespace Hypesoft.API.Controllers
         /// </summary>
         /// <param name="id">ID da categoria a ser removida</param>
         [HttpDelete("{id:guid}")]
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "categories-delete")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]

@@ -15,8 +15,11 @@ namespace Hypesoft.Infrastructure.Configurations
         )
         {
             // ✅ EF Core + MongoDB Provider
-            var connectionString = configuration.GetConnectionString("MongoDB") ?? "mongodb://localhost:27017";
-            var databaseName = configuration["MongoDB:DatabaseName"] ?? "HypesoftDb";
+            var connectionString =
+                configuration["MongoDbSettings:ConnectionString"]
+                ?? "mongodb://mongodb:27017/hypesoft_challenge";
+            var databaseName =
+                configuration["MongoDbSettings:DatabaseName"] ?? "hypesoft_challenge";
 
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseMongoDB(connectionString, databaseName)

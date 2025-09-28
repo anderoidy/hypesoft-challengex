@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Hypesoft.Domain.Common;
 using Hypesoft.Domain.Common.Interfaces;
 using Hypesoft.Domain.Entities;
-using Hypesoft.Domain.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using MongoDB.Bson.Serialization.Attributes;
 

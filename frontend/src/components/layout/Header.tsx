@@ -1,14 +1,17 @@
-import { useTheme } from 'next-themes';
+'use client';
+import { ThemeToggle } from "@/components/theme-toggle"
+import { useRouter } from 'next/navigation';
 import React from 'react';
 import { 
   FiBell, 
   FiLogOut,
   FiMenu, 
-  FiMoon, 
   FiSearch, 
   FiSettings,
-  FiSun,
-  FiUser} from 'react-icons/fi';
+  FiUser
+} from 'react-icons/fi';
+
+import { useAuth } from '@/contexts/AuthContext';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -21,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/theme';
+import { cn } from '@/lib/utils';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -29,20 +32,18 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onMenuClick, className }) => {
-  const { theme, setTheme } = useTheme();
-  const [isMounted, setIsMounted] = React.useState(false);
+  const { user, logout } = useAuth();
+  const router = useRouter();
 
-  React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/login');
+    } catch (error) {
+      console.error('Erro no logout:', error);
+      router.push('/login');
+    }
   };
-
-  if (!isMounted) {
-    return null;
-  }
 
   return (
     <header className={cn(
@@ -50,6 +51,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, className }) => {
       className
     )}>
       <div className="flex items-center gap-4">
+        {/* Menu Button para Mobile */}
         <Button
           variant="ghost"
           size="icon"
@@ -57,7 +59,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, className }) => {
           onClick={onMenuClick}
           aria-label="Toggle menu"
         >
-          <FiMenu className="size-5" />
+          <FiMenu className="size-5 text-gray-700 dark:text-gray-200" />
         </Button>
       </div>
 
@@ -75,24 +77,13 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, className }) => {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Theme Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-          >
-            {isMounted && theme === 'dark' ? (
-              <FiSun className="size-5" />
-            ) : (
-              <FiMoon className="size-5" />
-            )}
-          </Button>
+          {/* Theme Toggle usando componente */}
+          <ThemeToggle />
 
           {/* Notifications */}
           <Button variant="ghost" size="icon" className="relative">
             <div className="absolute right-2 top-2 size-2 rounded-full bg-primary"></div>
-            <FiBell className="size-5" />
+            <FiBell className="size-5 text-gray-700 dark:text-gray-200" />
           </Button>
 
           {/* User Menu */}
@@ -102,7 +93,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, className }) => {
                 <Avatar className="size-8">
                   <AvatarImage src="/avatars/01.png" alt="User" />
                   <AvatarFallback className="bg-primary text-primary-foreground">
-                    <FiUser className="size-4" />
+                    {user?.name?.charAt(0)?.toUpperCase() || <FiUser className="size-4" />}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -110,9 +101,11 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, className }) => {
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">Admin User</p>
+                  <p className="text-sm font-medium leading-none">
+                    {user?.name || 'Admin User'}
+                  </p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    admin@hypesoft.com
+                    {user?.email || 'admin@hypesoft.com'}
                   </p>
                 </div>
               </DropdownMenuLabel>
@@ -126,7 +119,10 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, className }) => {
                 <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer text-destructive">
+              <DropdownMenuItem 
+                className="cursor-pointer text-destructive"
+                onClick={handleLogout}
+              >
                 <FiLogOut className="mr-2 size-4" />
                 <span>Log out</span>
               </DropdownMenuItem>

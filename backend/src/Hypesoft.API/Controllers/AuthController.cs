@@ -107,10 +107,11 @@ public class AuthController : ControllerBase
         Console.WriteLine($"🔥 LOGIN CHAMADO! Username: {request?.Username}");
         try
         {
-            var tokenEndpoint =
-                $"{_configuration["Keycloak:Authority"]}/protocol/openid-connect/token";
-            var clientId = _configuration["Keycloak:ClientId"];
-            var clientSecret = _configuration["Keycloak:ClientSecret"];
+            var authServerUrl = _configuration["Keycloak:auth-server-url"];
+            var realm = _configuration["Keycloak:realm"];
+            var tokenEndpoint = $"{authServerUrl}realms/{realm}/protocol/openid-connect/token";
+            var clientId = _configuration["Keycloak:resource"];
+            var clientSecret = _configuration["Keycloak:credentials:secret"];
 
             var client = _httpClientFactory.CreateClient();
             var requestContent = new FormUrlEncodedContent(

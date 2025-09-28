@@ -1,23 +1,31 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Ardalis.Result;
-using Hypesoft.Application.Commands;
 using Hypesoft.Application.Commands.Products;
-using Hypesoft.Application.Queries;
-using Hypesoft.Application.Queries.Categories;
+using Hypesoft.Application.DTOs;
 using Hypesoft.Application.Queries.Products;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using PuppeteerSharp;
+using PuppeteerSharp.Media;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+using Syncfusion.Drawing;
+using Syncfusion.Pdf;
+using Syncfusion.Pdf.Graphics;
+using Unit = QuestPDF.Infrastructure.Unit;
 
 namespace Hypesoft.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    //[Authorize]
     public class ProductsController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -29,12 +37,244 @@ namespace Hypesoft.API.Controllers
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        /// <summary>
-        /// Obtém uma lista paginada de produtos
-        /// </summary>
-        /// <param name="search">Termo de busca opcional</param>
-        /// <param name="pageNumber">Número da página (padrão: 1)</param>
-        /// <param name="pageSize">Itens por página (padrão: 10, máximo: 100)</param>
+        //Comeca aqui[HttpGet("report/pdf")]
+
+        [HttpGet("report/pdf")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ExportToPdf()
+        {
+            try
+            {
+                // Buscar produtos
+                var query = new GetAllProductsQuery(null, 1, 100);
+                var result = await _mediator.Send(query);
+
+                if (result.Status != Ardalis.Result.ResultStatus.Ok)
+                {
+                    return StatusCode(500, "Erro ao buscar produtos");
+                }
+
+                var productsList = result.Value?.Items?.ToList() ?? new List<ProductDto>();
+
+                // Gerar PDF usando QuestPDF
+                var pdfBytes = GenerateProductReport(productsList);
+
+                // Retornar PDF (NÃO MAIS CSV!)
+                return File(
+                    pdfBytes,
+                    "application/pdf",
+                    $"relatorio-produtos-{DateTime.Now:yyyyMMdd-HHmm}.pdf"
+                );
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message, type = ex.GetType().Name });
+            }
+        }
+
+        private byte[] GenerateProductReport(List<ProductDto> products)
+        {
+            return QuestPDF
+                .Fluent.Document.Create(container =>
+                {
+                    container.Page(page =>
+                    {
+                        page.Size(QuestPDF.Helpers.PageSizes.A4);
+                        page.Margin(2, QuestPDF.Infrastructure.Unit.Centimetre);
+                        page.DefaultTextStyle(x => x.FontSize(10));
+
+                        // Cabeçalho
+                        page.Header()
+                            .Height(100)
+                            .Background(QuestPDF.Helpers.Colors.Blue.Medium)
+                            .AlignCenter()
+                            .Text(text =>
+                            {
+                                text.DefaultTextStyle(x =>
+                                    x.FontColor(QuestPDF.Helpers.Colors.White)
+                                );
+                                text.AlignCenter();
+                                text.Line("HYPESOFT CHALLENGE").FontSize(20).Bold();
+                                text.Line("RELATÓRIO DE PRODUTOS").FontSize(16);
+                                text.Line($"Gerado em: {DateTime.Now:dd/MM/yyyy HH:mm}")
+                                    .FontSize(12);
+                            });
+
+                        // Conteúdo principal
+                        page.Content()
+                            .PaddingVertical(1, QuestPDF.Infrastructure.Unit.Centimetre)
+                            .Column(column =>
+                            {
+                                // Resumo executivo
+                                column
+                                    .Item()
+                                    .ShowOnce()
+                                    .Column(summary =>
+                                    {
+                                        summary.Item().Text("RESUMO EXECUTIVO").FontSize(16).Bold();
+                                        summary
+                                            .Item()
+                                            .PaddingTop(10)
+                                            .Row(row =>
+                                            {
+                                                row.RelativeItem()
+                                                    .Background(
+                                                        QuestPDF.Helpers.Colors.Grey.Lighten4
+                                                    )
+                                                    .Padding(15)
+                                                    .Column(col =>
+                                                    {
+                                                        col.Item()
+                                                            .Text(
+                                                                $"Total de Produtos: {products.Count}"
+                                                            )
+                                                            .FontSize(12)
+                                                            .Bold();
+                                                        col.Item()
+                                                            .Text(
+                                                                $"Produtos Disponíveis: {products.Count(p => p.StockQuantity > 0)}"
+                                                            )
+                                                            .FontSize(11);
+                                                        col.Item()
+                                                            .Text(
+                                                                $"Produtos Esgotados: {products.Count(p => p.StockQuantity == 0)}"
+                                                            )
+                                                            .FontSize(11);
+                                                        col.Item()
+                                                            .Text(
+                                                                $"Valor Total em Estoque: R$ {products.Sum(p => p.Price * p.StockQuantity):N2}"
+                                                            )
+                                                            .FontSize(11);
+                                                    });
+                                            });
+                                    });
+
+                                column
+                                    .Item()
+                                    .PaddingTop(20)
+                                    .Text("DETALHAMENTO DOS PRODUTOS")
+                                    .FontSize(16)
+                                    .Bold();
+
+                                // Tabela de produtos
+                                column
+                                    .Item()
+                                    .PaddingTop(10)
+                                    .Table(table =>
+                                    {
+                                        // Definir colunas
+                                        table.ColumnsDefinition(columns =>
+                                        {
+                                            columns.RelativeColumn(3); // Nome
+                                            columns.RelativeColumn(2); // Categoria
+                                            columns.RelativeColumn(1); // Preço
+                                            columns.RelativeColumn(1); // Estoque
+                                            columns.RelativeColumn(1); // Status
+                                        });
+
+                                        // Cabeçalho da tabela
+                                        table.Header(header =>
+                                        {
+                                            header
+                                                .Cell()
+                                                .Background(QuestPDF.Helpers.Colors.Grey.Medium)
+                                                .Padding(8)
+                                                .Text("PRODUTO")
+                                                .FontColor(QuestPDF.Helpers.Colors.White)
+                                                .Bold();
+                                            header
+                                                .Cell()
+                                                .Background(QuestPDF.Helpers.Colors.Grey.Medium)
+                                                .Padding(8)
+                                                .Text("CATEGORIA")
+                                                .FontColor(QuestPDF.Helpers.Colors.White)
+                                                .Bold();
+                                            header
+                                                .Cell()
+                                                .Background(QuestPDF.Helpers.Colors.Grey.Medium)
+                                                .Padding(8)
+                                                .Text("PREÇO")
+                                                .FontColor(QuestPDF.Helpers.Colors.White)
+                                                .Bold();
+                                            header
+                                                .Cell()
+                                                .Background(QuestPDF.Helpers.Colors.Grey.Medium)
+                                                .Padding(8)
+                                                .Text("ESTOQUE")
+                                                .FontColor(QuestPDF.Helpers.Colors.White)
+                                                .Bold();
+                                            header
+                                                .Cell()
+                                                .Background(QuestPDF.Helpers.Colors.Grey.Medium)
+                                                .Padding(8)
+                                                .Text("STATUS")
+                                                .FontColor(QuestPDF.Helpers.Colors.White)
+                                                .Bold();
+                                        });
+
+                                        // Linhas da tabela
+                                        foreach (var product in products)
+                                        {
+                                            var status =
+                                                product.StockQuantity > 0
+                                                    ? "Disponível"
+                                                    : "Esgotado";
+                                            var statusColor =
+                                                product.StockQuantity > 0
+                                                    ? QuestPDF.Helpers.Colors.Green.Medium
+                                                    : QuestPDF.Helpers.Colors.Red.Medium;
+
+                                            table
+                                                .Cell()
+                                                .Border(1)
+                                                .Padding(5)
+                                                .Text(product.Name ?? "")
+                                                .FontSize(9);
+                                            table
+                                                .Cell()
+                                                .Border(1)
+                                                .Padding(5)
+                                                .Text(product.CategoryName ?? "N/A")
+                                                .FontSize(9);
+                                            table
+                                                .Cell()
+                                                .Border(1)
+                                                .Padding(5)
+                                                .Text($"R$ {product.Price:F2}")
+                                                .FontSize(9);
+                                            table
+                                                .Cell()
+                                                .Border(1)
+                                                .Padding(5)
+                                                .Text(product.StockQuantity.ToString())
+                                                .FontSize(9);
+                                            table
+                                                .Cell()
+                                                .Border(1)
+                                                .Padding(5)
+                                                .Text(status)
+                                                .FontColor(statusColor)
+                                                .FontSize(9);
+                                        }
+                                    });
+                            });
+
+                        // Rodapé
+                        page.Footer()
+                            .Height(30)
+                            .AlignCenter()
+                            .Text(x =>
+                            {
+                                x.CurrentPageNumber();
+                                x.Span(" / ");
+                                x.TotalPages();
+                            });
+                    });
+                })
+                .GeneratePdf();
+        }
+
+        // Acaba aqui ai vem o Resto dos seus métodos permanecem iguais...
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -65,10 +305,6 @@ namespace Hypesoft.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Obtém um produto pelo ID
-        /// </summary>
-        /// <param name="id">ID do produto</param>
         [HttpGet("{id:guid}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -92,12 +328,7 @@ namespace Hypesoft.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Cria um novo produto1
-        /// </summary>
-        /// <param name="command">Dados do produto</param>
         [HttpPost]
-        // [Authorize(Roles = "products-create")] // Mantenha comentado por enquanto
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -106,69 +337,33 @@ namespace Hypesoft.API.Controllers
             try
             {
                 _logger.LogInformation("=== INÍCIO CREATE PRODUCT ===");
-                _logger.LogInformation("Command recebido: {@Command}", command);
 
                 if (command == null)
-                {
-                    _logger.LogError("Command é null!");
                     return BadRequest("Dados do produto não fornecidos");
-                }
 
                 if (!ModelState.IsValid)
-                {
-                    _logger.LogWarning("ModelState inválido: {@ModelState}", ModelState);
                     return BadRequest(ModelState);
-                }
 
-                _logger.LogInformation("Enviando command para MediatR...");
                 var result = await _mediator.Send(command);
 
-                _logger.LogInformation(
-                    "Resultado recebido: Status={Status}, Value={Value}",
-                    result.Status,
-                    result.Value
-                );
-
                 if (result.Status == ResultStatus.Invalid)
-                {
-                    _logger.LogWarning(
-                        "Validação falhou: {@ValidationErrors}",
-                        result.ValidationErrors
-                    );
                     return BadRequest(result.ValidationErrors);
-                }
 
                 if (result.Status == ResultStatus.NotFound)
-                {
-                    _logger.LogWarning("Categoria não encontrada");
                     return NotFound("Categoria não encontrada");
-                }
 
                 if (result.IsSuccess)
-                {
-                    _logger.LogInformation("Produto criado com sucesso: {ProductId}", result.Value);
                     return CreatedAtAction(
                         nameof(GetById),
                         new { id = result.Value },
                         new { id = result.Value }
                     );
-                }
 
-                _logger.LogError("Resultado inesperado: {@Result}", result);
                 return StatusCode(500, "Resultado inesperado ao criar produto");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "=== ERRO CRÍTICO AO CRIAR PRODUTO ===");
-                _logger.LogError("Tipo da exceção: {ExceptionType}", ex.GetType().Name);
-                _logger.LogError("Mensagem: {Message}", ex.Message);
-                _logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
-
-                if (ex.InnerException != null)
-                {
-                    _logger.LogError("Inner exception: {InnerMessage}", ex.InnerException.Message);
-                }
-
+                _logger.LogError(ex, "Erro ao criar produto");
                 return StatusCode(
                     StatusCodes.Status500InternalServerError,
                     "Ocorreu um erro ao criar o produto"
@@ -176,13 +371,8 @@ namespace Hypesoft.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Atualiza um produto existente
-        /// </summary>
-        /// <param name="id">ID do produto</param>
-        /// <param name="command">Dados atualizados do produto</param>
         [HttpPut("{id:guid}")]
-        [Authorize(Roles = "products-update")]
+        //[Authorize(Roles = "products-update")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -191,13 +381,12 @@ namespace Hypesoft.API.Controllers
         {
             try
             {
-                if (id != command.Id)
-                    return BadRequest("ID na URL não corresponde ao ID no corpo da requisição");
+                var commandWithId = command with { Id = id };
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                var result = await _mediator.Send(command);
+                var result = await _mediator.Send(commandWithId);
 
                 if (result.Status == ResultStatus.NotFound)
                     return NotFound("Produto ou categoria não encontrada");
@@ -217,12 +406,8 @@ namespace Hypesoft.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Remove um produto
-        /// </summary>
-        /// <param name="id">ID do produto a ser removido</param>
         [HttpDelete("{id:guid}")]
-        [Authorize(Roles = "products-delete")]
+        //[Authorize(Roles = "products-delete")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]

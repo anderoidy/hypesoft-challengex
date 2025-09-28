@@ -1,9 +1,9 @@
-namespace Hypesoft.Domain.Interfaces
+namespace Hypesoft.Domain.Common.Interfaces
 {
-    public interface IEntity<TKey>
+    public interface IEntity<TId>
     {
-        TKey Id { get; set; }
+        // Remova a exigência de set público
+        // Apenas getter é exigido pela interface
+        TId Id { get; }
     }
-
-    public interface IEntity : IEntity<Guid> { }
 }

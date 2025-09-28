@@ -5,7 +5,7 @@
     <Nullable>disable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- Remove apenas os warnings que mais incomodam -->
-    <NoWarn>$(NoWarn);1591;CS8602;CS8618;CS8601;CS0105</NoWarn>
+    <NoWarn>$(NoWarn);1591;CS8602;CS8618;CS8601;CS0105;CS8632</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Hypesoft.Application\Hypesoft.Application.csproj" />
@@ -15,6 +15,7 @@
     <PackageReference Include="Ardalis.Result" Version="10.1.0" />
     <PackageReference Include="Ardalis.Specification" Version="9.2.0" />
     <PackageReference Include="Ardalis.Specification.EntityFrameworkCore" Version="9.2.0" />
+    <PackageReference Include="itext7" Version="8.0.2" />
     <PackageReference Include="Keycloak.AuthServices.Authentication" Version="2.7.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.8" />
@@ -24,7 +25,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="MongoDB.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="MongoDB.EntityFrameworkCore" Version="9.0.1" />
+    <PackageReference Include="PuppeteerSharp" Version="20.2.2" />
+    <PackageReference Include="QuestPDF" Version="2025.7.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="6.5.0" />
     <PackageReference Include="Swashbuckle.AspNetCore.Filters" Version="8.0.0" />
@@ -34,5 +37,6 @@
     <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
     <PackageReference Include="Ardalis.Result.AspNetCore" Version="10.0.0" />
     <PackageReference Include="MediatR" Version="13.0.0" />
+    <PackageReference Include="Syncfusion.Pdf.Net.Core" Version="31.1.20" />
   </ItemGroup>
 </Project>

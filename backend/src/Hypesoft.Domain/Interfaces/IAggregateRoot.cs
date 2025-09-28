@@ -1,7 +1,7 @@
 using System;
-using Hypesoft.Domain.Interfaces;
+using Hypesoft.Domain.Common.Interfaces;
 
-namespace Hypesoft.Domain.Common.Interfaces
+namespace Hypesoft.Domain.Interfaces
 {
-    public interface IAggregateRoot : IEntity { }
+    public interface IAggregateRoot { }
 }

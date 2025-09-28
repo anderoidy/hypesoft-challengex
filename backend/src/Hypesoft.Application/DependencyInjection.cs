@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using AutoMapper;
 using FluentValidation;
+using Hypesoft.Application;
 using Hypesoft.Domain.Common.Interfaces;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;

@@ -2,7 +2,6 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Hypesoft.Domain.Common.Interfaces;
-using Hypesoft.Domain.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using MongoDB.Bson.Serialization.Attributes;
 

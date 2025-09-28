@@ -91,9 +91,12 @@ namespace Hypesoft.Application.Handlers.Products
                 }
 
                 // Map updates to existing product
+                // Map updates to existing product
                 _mapper.Map(request, existingProduct);
-                existingProduct.UpdatedAt = DateTime.UtcNow;
 
+                // Atualiza auditoria corretamente
+                existingProduct.SetUpdatedAt(DateTime.UtcNow);
+                existingProduct.SetLastModifiedBy("system");
                 // Update product
                 await _productRepository.UpdateAsync(existingProduct);
 

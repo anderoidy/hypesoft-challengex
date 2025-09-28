@@ -1,162 +1,154 @@
 using System;
 using System.Collections.Generic;
 using Hypesoft.Domain.Common.Interfaces;
-using Hypesoft.Domain.Interfaces;
 
 namespace Hypesoft.Domain.Common
 {
     /// <summary>
     /// Base class for all domain entities.
     /// </summary>
-    public abstract class BaseEntity : IEntity<Guid>, IAuditableEntity
+    public abstract class BaseEntity : IEntity<Guid>
     {
         /// <summary>
-        /// Gets or sets the unique identifier for this entity.
+        /// Unique identifier (never Guid.Empty).
         /// </summary>
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid Id { get; private set; }
 
         /// <summary>
-        /// Gets or sets the date and time when this entity was created.
+        /// Creation timestamp (UTC).
         /// </summary>
-        public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+        public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
 
         /// <summary>
-        /// Gets or sets the date and time when this entity was last modified.
+        /// Creator user id/name.
         /// </summary>
-        public DateTimeOffset? ModifiedAt { get; set; }
+        public string CreatedBy { get; private set; } = "system";
 
         /// <summary>
-        /// Gets or sets the user who created this entity.
+        /// Last modification timestamp (UTC).
         /// </summary>
-        public string? CreatedBy { get; set; }
+        public DateTimeOffset? ModifiedAt { get; private set; }
 
         /// <summary>
-        /// Gets or sets the user who last modified this entity.
+        /// Last modifier user id/name.
         /// </summary>
-        public string? ModifiedBy { get; set; }
+        public string? ModifiedBy { get; private set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether this entity is deleted.
+        /// Soft delete flag.
         /// </summary>
-        public bool IsDeleted { get; set; }
+        public bool IsDeleted { get; private set; }
 
         /// <summary>
-        /// Gets or sets the date and time when this entity was deleted.
+        /// Soft delete timestamp.
         /// </summary>
-        public DateTimeOffset? DeletedAt { get; set; }
+        public DateTimeOffset? DeletedAt { get; private set; }
 
         /// <summary>
-        /// Gets or sets the user who deleted this entity.
+        /// Soft delete user id/name.
         /// </summary>
-        public string? DeletedBy { get; set; }
+        public string? DeletedBy { get; private set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether this entity is active.
+        /// Active flag.
         /// </summary>
-        public bool IsActive { get; protected set; } = true;
+        public bool IsActive { get; private set; } = true;
 
         /// <summary>
-        /// Gets or sets the concurrency token for optimistic concurrency control.
+        /// Concurrency token (if needed by provider).
         /// </summary>
-        public byte[]? RowVersion { get; set; }
+        public byte[]? RowVersion { get; private set; }
 
         /// <summary>
-        /// Gets or sets the domain events associated with this entity.
+        /// Domain events.
         /// </summary>
+        // Campo de apoio
         private List<IDomainEvent>? _domainEvents;
 
-        /// <summary>
-        /// Gets the domain events associated with this entity.
-        /// </summary>
-        public IReadOnlyCollection<IDomainEvent> DomainEvents =>
-            _domainEvents?.AsReadOnly() ?? new List<IDomainEvent>().AsReadOnly();
+        // Getter seguro e tipado (sem ?? entre tipos diferentes)
+        public IReadOnlyCollection<IDomainEvent> DomainEvents
+        {
+            get
+            {
+                if (_domainEvents is null || _domainEvents.Count == 0)
+                    return Array.Empty<IDomainEvent>(); // retorna IReadOnlyCollection<IDomainEvent>
+
+                return _domainEvents.AsReadOnly(); // ReadOnlyCollection<IDomainEvent> implementa IReadOnlyCollection<IDomainEvent>
+            }
+        }
+
+        #region Constructors
+        protected BaseEntity() { }
+
+        // Adicione dentro de BaseEntity
+        protected void SetId(Guid id)
+        {
+            if (id == Guid.Empty)
+                throw new ArgumentException("Id não pode ser Guid.Empty", nameof(id));
+
+            Id = id;
+        }
+
+        protected BaseEntity(string createdBy)
+        {
+            Id = Guid.NewGuid();
+            CreatedAt = DateTimeOffset.UtcNow;
+            CreatedBy = string.IsNullOrWhiteSpace(createdBy) ? "system" : createdBy;
+            IsActive = true;
+        }
+        #endregion
 
         #region Domain Events Methods
-        /// <summary>
-        /// Adds a domain event to this entity.
-        /// </summary>
-        /// <param name="eventItem">The domain event to add.</param>
         public void AddDomainEvent(IDomainEvent eventItem)
         {
             _domainEvents ??= new List<IDomainEvent>();
             _domainEvents.Add(eventItem);
         }
 
-        /// <summary>
-        /// Removes a domain event from this entity.
-        /// </summary>
-        /// <param name="eventItem">The domain event to remove.</param>
-        public void RemoveDomainEvent(IDomainEvent eventItem)
-        {
-            _domainEvents?.Remove(eventItem);
-        }
+        public void RemoveDomainEvent(IDomainEvent eventItem) => _domainEvents?.Remove(eventItem);
 
-        /// <summary>
-        /// Clears all domain events from this entity.
-        /// </summary>
-        public void ClearDomainEvents()
-        {
-            _domainEvents?.Clear();
-        }
+        public void ClearDomainEvents() => _domainEvents?.Clear();
         #endregion
 
-        #region Activation Methods
-        /// <summary>
-        /// Deactivates the entity.
-        /// </summary>
-        /// <param name="userId">The user who is deactivating the entity.</param>
+        #region Activation & Deletion Methods
         public void Deactivate(string userId)
         {
             IsActive = false;
             UpdateAuditFields(userId);
         }
 
-        /// <summary>
-        /// Activates the entity.
-        /// </summary>
-        /// <param name="userId">The user who is activating the entity.</param>
         public void Activate(string userId)
         {
             IsActive = true;
             UpdateAuditFields(userId);
         }
+
+        public void SoftDelete(string userId)
+        {
+            IsDeleted = true;
+            DeletedAt = DateTimeOffset.UtcNow;
+            DeletedBy = string.IsNullOrWhiteSpace(userId) ? "system" : userId;
+            UpdateAuditFields(userId);
+        }
         #endregion
 
         #region Audit Methods
-        /// <summary>
-        /// Updates the audit fields for modification.
-        /// </summary>
-        /// <param name="userId">The user who is modifying the entity.</param>
         public void UpdateAuditFields(string userId)
         {
             ModifiedAt = DateTimeOffset.UtcNow;
-            ModifiedBy = userId;
+            ModifiedBy = string.IsNullOrWhiteSpace(userId) ? "system" : userId;
         }
 
-        /// <summary>
-        /// Sets the created by user.
-        /// </summary>
-        /// <param name="userId">The user who created the entity.</param>
         public void SetCreatedBy(string userId)
         {
-            if (string.IsNullOrWhiteSpace(userId))
-                throw new ArgumentException("User ID cannot be null or empty", nameof(userId));
+            CreatedBy = string.IsNullOrWhiteSpace(userId) ? "system" : userId;
 
-            CreatedBy = userId;
-            ModifiedBy = userId;
-        }
+            // Se CreatedAt estiver default (em cenários de reidratação)
+            if (CreatedAt == default)
+                CreatedAt = DateTimeOffset.UtcNow;
 
-        /// <summary>
-        /// Sets the last modified by user.
-        /// </summary>
-        /// <param name="userId">The user who last modified the entity.</param>
-        public void SetLastModifiedBy(string userId)
-        {
-            if (string.IsNullOrWhiteSpace(userId))
-                throw new ArgumentException("User ID cannot be null or empty", nameof(userId));
-
-            ModifiedAt = DateTimeOffset.UtcNow;
-            ModifiedBy = userId;
+            // Ajusta também a primeira modificação para o mesmo usuário
+            ModifiedBy = CreatedBy;
         }
         #endregion
     }

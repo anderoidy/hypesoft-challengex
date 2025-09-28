@@ -1,17 +1,18 @@
+using System;
+using System.Collections.Generic;
 using Hypesoft.Domain.Common;
 using Hypesoft.Domain.Common.Interfaces;
+using Hypesoft.Domain.Exceptions;
 using Hypesoft.Domain.Interfaces;
 
 namespace Hypesoft.Domain.Entities;
 
 public class Category : BaseEntity, IAggregateRoot
 {
-    public string Name { get; private set; }
+    public string Name { get; private set; } = string.Empty;
     public string? Description { get; private set; }
     public string? ImageUrl { get; private set; }
-    public bool IsMainCategory { get; private set; }
-    public string? Slug { get; private set; }
-    public DateTime? UpdatedAt { get; private set; }
+    public string Slug { get; private set; } = string.Empty;
 
     // Navigation properties
     public Guid? ParentCategoryId { get; private set; }
@@ -21,37 +22,28 @@ public class Category : BaseEntity, IAggregateRoot
     public virtual ICollection<Category> SubCategories { get; private set; } = new List<Category>();
     public virtual ICollection<Product> Products { get; private set; } = new List<Product>();
 
-    // Método para atualizar a data de atualização
-    public void SetUpdatedAt(DateTime updatedAt)
+    // 🔹 Construtor protegido para EF/Mongo
+    protected Category()
+        : base("system") { }
+
+    // Dentro de Category (que herda BaseEntity)
+    public void EnsureId()
     {
-        UpdatedAt = updatedAt;
+        if (Id == Guid.Empty)
+            SetId(Guid.NewGuid());
     }
 
-    //Metodo da correcao X
-    public void ChangeParent(Guid? newParentId, string? userId = null)
-    {
-        if (ParentCategoryId == newParentId)
-            return; // Já está no pai correto
-
-        ParentCategoryId = newParentId;
-        IsMainCategory = !newParentId.HasValue;
-
-        if (!string.IsNullOrEmpty(userId))
-            UpdateAuditFields(userId);
-        else
-            UpdatedAt = DateTime.UtcNow;
-    }
-
-    protected Category() { } // Private constructor for EF Core
-
+    // 🔹 Construtor principal
     public Category(
         string name,
         string? description = null,
         string? imageUrl = null,
-        bool isMainCategory = true,
         Guid? parentCategoryId = null,
-        string? slug = null
+        string? slug = null,
+        bool isActive = true,
+        string? createdBy = null
     )
+        : base(createdBy ?? "system")
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("O nome da categoria não pode ser vazio", nameof(name));
@@ -59,25 +51,19 @@ public class Category : BaseEntity, IAggregateRoot
         Name = name.Trim();
         Description = description?.Trim();
         ImageUrl = imageUrl;
-        IsMainCategory = isMainCategory;
         ParentCategoryId = parentCategoryId;
         SetSlug(slug ?? GenerateSlug(name));
-    }
 
-    // Adicionando o método UpdateAuditFields para atualizar os campos de auditoria
-    public void UpdateAuditFields(string userId)
-    {
-        ModifiedAt = DateTime.UtcNow;
-        ModifiedBy = userId;
-        UpdatedAt = DateTime.UtcNow;
+        if (!isActive)
+            Deactivate(createdBy ?? "system");
     }
 
     public void Update(
         string name,
         string? description = null,
         string? imageUrl = null,
-        string? userId = null,
-        string? slug = null
+        string? slug = null,
+        string? userId = null
     )
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -92,16 +78,13 @@ public class Category : BaseEntity, IAggregateRoot
         if (!string.IsNullOrEmpty(slug))
             SetSlug(slug);
 
-        if (!string.IsNullOrEmpty(userId))
-            UpdateAuditFields(userId);
-
-        UpdatedAt = DateTime.UtcNow;
+        UpdateAuditFields(userId ?? "system");
     }
 
     public void SetSlug(string slug)
     {
         Slug = string.IsNullOrWhiteSpace(slug) ? GenerateSlug(Name) : slug.Trim().ToLower();
-        UpdatedAt = DateTime.UtcNow;
+        UpdateAuditFields("system");
     }
 
     private string GenerateSlug(string name)
@@ -113,7 +96,24 @@ public class Category : BaseEntity, IAggregateRoot
             .Replace(" ", "-")
             .Replace("&", "and")
             .Replace("#", "sharp")
-            .Replace("+", "plus");
+            .Replace("+", "plus")
+            .Replace("á", "a")
+            .Replace("é", "e")
+            .Replace("í", "i")
+            .Replace("ó", "o")
+            .Replace("ú", "u")
+            .Replace("ã", "a")
+            .Replace("õ", "o")
+            .Replace("ç", "c");
+    }
+
+    public void ChangeParent(Guid? newParentId, string? userId = null)
+    {
+        if (ParentCategoryId == newParentId)
+            return;
+
+        ParentCategoryId = newParentId;
+        UpdateAuditFields(userId ?? "system");
     }
 
     public void AddSubCategory(Category subCategory, string? userId = null)
@@ -127,18 +127,13 @@ public class Category : BaseEntity, IAggregateRoot
             );
 
         if (subCategory.ParentCategoryId == Id)
-            return; // Já é uma subcategoria desta categoria
+            return; // já é subcategoria desta categoria
 
-        // Remove de outra categoria pai, se houver
-        if (subCategory.ParentCategory != null)
-            subCategory.ParentCategory.RemoveSubCategory(subCategory);
+        subCategory.ParentCategory?.RemoveSubCategory(subCategory, userId);
 
         subCategory.ParentCategoryId = Id;
         subCategory.ParentCategory = this;
-        subCategory.IsMainCategory = false;
-
-        if (!string.IsNullOrEmpty(userId))
-            subCategory.UpdateAuditFields(userId);
+        subCategory.Deactivate(userId ?? "system");
 
         SubCategories.Add(subCategory);
     }
@@ -149,21 +144,18 @@ public class Category : BaseEntity, IAggregateRoot
             throw new ArgumentNullException(nameof(subCategory));
 
         if (subCategory.ParentCategoryId != Id)
-            return; // Não é subcategoria desta categoria
+            return;
 
         subCategory.ParentCategoryId = null;
         subCategory.ParentCategory = null;
-        subCategory.IsMainCategory = true;
-
-        if (!string.IsNullOrEmpty(userId))
-            subCategory.UpdateAuditFields(userId);
+        subCategory.Activate(userId ?? "system");
 
         SubCategories.Remove(subCategory);
     }
 
     public void SetAsMainCategory(bool isMain, string? userId = null)
     {
-        if (IsMainCategory == isMain)
+        if (IsActive == isMain)
             return;
 
         if (!isMain && ParentCategoryId == null)
@@ -171,10 +163,10 @@ public class Category : BaseEntity, IAggregateRoot
                 "Uma categoria raiz deve ser uma categoria principal"
             );
 
-        IsMainCategory = isMain;
-
-        if (!string.IsNullOrEmpty(userId))
-            UpdateAuditFields(userId);
+        if (isMain)
+            Activate(userId ?? "system");
+        else
+            Deactivate(userId ?? "system");
     }
 
     public void UpdateImage(string imageUrl, string? userId = null)
@@ -183,8 +175,6 @@ public class Category : BaseEntity, IAggregateRoot
             throw new ArgumentException("A URL da imagem não pode ser vazia", nameof(imageUrl));
 
         ImageUrl = imageUrl;
-
-        if (!string.IsNullOrEmpty(userId))
-            UpdateAuditFields(userId);
+        UpdateAuditFields(userId ?? "system");
     }
 }

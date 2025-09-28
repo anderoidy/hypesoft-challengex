@@ -69,7 +69,7 @@ namespace Hypesoft.Application.Handlers.Categories
                     slug: null // Mantém o slug atual
                 );
 
-                // Atualiza IsMainCategory baseado no IsActive do request
+                // Atualiza IsActive baseado no IsActive do request
                 category.SetAsMainCategory(request.IsActive, request.ModifiedBy);
 
                 // Salva as alterações
@@ -81,7 +81,7 @@ namespace Hypesoft.Application.Handlers.Categories
                     Name: updated.Name,
                     Description: updated.Description,
                     ImageUrl: updated.ImageUrl,
-                    IsMainCategory: updated.IsMainCategory,
+                    IsActive: updated.IsActive,
                     ParentCategoryId: updated.ParentCategoryId,
                     ParentCategoryName: updated.ParentCategory?.Name
                 );

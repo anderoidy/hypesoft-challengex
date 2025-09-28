@@ -31,7 +31,7 @@ export function Providers({ children, ...props }: ThemeProviderProps) {
       >
         {children}
         <Toast />
-        <ReactQueryDevtools initialIsOpen={false} position="bottom-right" asChild={false} />
+        <ReactQueryDevtools initialIsOpen={false} position="bottom"/>
       </NextThemesProvider>
     </QueryClientProvider>
   )

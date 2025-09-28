@@ -61,6 +61,7 @@
     "@vitest/coverage-v8": "^1.1.0",
     "@vitest/ui": "^1.1.0",
     "autoprefixer": "^10.4.16",
+    "cssnano": "7.1.1",
     "eslint": "8.57.1",
     "eslint-config-next": "14.0.4",
     "eslint-config-prettier": "^9.0.0",

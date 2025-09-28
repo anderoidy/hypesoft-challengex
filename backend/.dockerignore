@@ -1,0 +1,14 @@
+**/bin
+**/obj
+**/node_modules
+.git
+.vscode
+Dockerfile
+docker-compose.yml
+*.md
+*.log
+*.ts
+*.tsx
+npm-debug.log
+yarn-debug.log
+yarn-error.log

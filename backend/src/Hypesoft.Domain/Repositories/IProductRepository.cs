@@ -1,3 +1,6 @@
+using System.Threading;
+using Ardalis.Specification;
+using Ardalis.Specification;
 using Hypesoft.Domain.Entities;
 
 namespace Hypesoft.Domain.Repositories
@@ -14,5 +17,11 @@ namespace Hypesoft.Domain.Repositories
         Task AddAsync(Product product);
         Task UpdateAsync(Product product);
         Task DeleteAsync(Guid id);
+
+        // Add ListAsync method for specification pattern support
+        Task<IReadOnlyList<Product>> ListAsync(
+            ISpecification<Product> specification,
+            CancellationToken cancellationToken = default
+        );
     }
 }

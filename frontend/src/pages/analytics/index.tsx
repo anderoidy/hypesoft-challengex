@@ -1,3 +1,4 @@
+'use clint'
 import {
   BarElement,
   CategoryScale,
@@ -13,6 +14,7 @@ import {
 import { FiDollarSign, FiShoppingBag, FiUsers, FiTrendingUp, FiPieChart } from 'react-icons/fi';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Bar, Line, Pie } from 'react-chartjs-2';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 // Register ChartJS components
 ChartJS.register(
@@ -133,87 +135,89 @@ const StatCard = ({ title, value, change, icon: Icon }: { title: string; value: 
 
 export default function AnalyticsPage() {
   return (
-    <MainLayout>
-      <div className="p-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Análises</h1>
-          <p className="text-gray-500">Métricas e insights sobre o desempenho da sua loja</p>
-        </div>
+    <ProtectedRoute>
+      <MainLayout>
+        <div className="p-6">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">Análises</h1>
+            <p className="text-gray-500">Métricas e insights sobre o desempenho da sua loja</p>
+          </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <StatCard
-            title="Receita Total"
-            value={
-              new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              }).format(128000)
-            }
-            change="12.5%"
-            icon={FiDollarSign}
-          />
-          <StatCard
-            title="Vendas"
-            value={new Intl.NumberFormat().format(1243)}
-            change="8.2%"
-            icon={FiShoppingBag}
-          />
-          <StatCard
-            title="Clientes"
-            value={new Intl.NumberFormat().format(842)}
-            change="5.7%"
-            icon={FiUsers}
-          />
-          <StatCard
-            title="Crescimento"
-            value="+18.3%"
-            change="2.4%"
-            icon={FiTrendingUp}
-          />
-        </div>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <StatCard
+              title="Receita Total"
+              value={
+                new Intl.NumberFormat('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                }).format(128000)
+              }
+              change="12.5%"
+              icon={FiDollarSign}
+            />
+            <StatCard
+              title="Vendas"
+              value={new Intl.NumberFormat().format(1243)}
+              change="8.2%"
+              icon={FiShoppingBag}
+            />
+            <StatCard
+              title="Clientes"
+              value={new Intl.NumberFormat().format(842)}
+              change="5.7%"
+              icon={FiUsers}
+            />
+            <StatCard
+              title="Crescimento"
+              value="+18.3%"
+              change="2.4%"
+              icon={FiTrendingUp}
+            />
+          </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Receita Mensal</h2>
-              <div className="bg-indigo-50 text-indigo-600 rounded-lg p-2">
-                <FiDollarSign size={18} />
+          {/* Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Receita Mensal</h2>
+                <div className="bg-indigo-50 text-indigo-600 rounded-lg p-2">
+                  <FiDollarSign size={18} />
+                </div>
+              </div>
+              <div className="h-80">
+                <Line data={salesData} options={chartOptions} />
               </div>
             </div>
-            <div className="h-80">
-              <Line data={salesData} options={chartOptions} />
+
+            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Vendas por Categoria</h2>
+                <div className="bg-indigo-50 text-indigo-600 rounded-lg p-2">
+                  <FiPieChart size={18} />
+                </div>
+              </div>
+              <div className="h-80">
+                <Pie data={categoryData} options={pieOptions} />
+              </div>
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Vendas por Categoria</h2>
-              <div className="bg-indigo-50 text-indigo-600 rounded-lg p-2">
-                <FiPieChart size={18} />
-              </div>
+              <h2 className="text-lg font-semibold text-gray-900">Vendas da Semana</h2>
+              <select className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <option>Últimos 7 dias</option>
+                <option>Últimos 30 dias</option>
+                <option>Últimos 90 dias</option>
+              </select>
             </div>
             <div className="h-80">
-              <Pie data={categoryData} options={pieOptions} />
+              <Bar data={revenueData} options={chartOptions} />
             </div>
           </div>
         </div>
-
-        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Vendas da Semana</h2>
-            <select className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-              <option>Últimos 7 dias</option>
-              <option>Últimos 30 dias</option>
-              <option>Últimos 90 dias</option>
-            </select>
-          </div>
-          <div className="h-80">
-            <Bar data={revenueData} options={chartOptions} />
-          </div>
-        </div>
-      </div>
-    </MainLayout>
+      </MainLayout>
+    </ProtectedRoute>
   );
 }

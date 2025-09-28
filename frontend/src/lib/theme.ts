@@ -5,8 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const theme = {
-  // Color palette
+export const themes = {
   colors: {
     primary: {
       DEFAULT: 'hsl(222.2 47.4% 11.2%)',
@@ -56,8 +55,7 @@ export const theme = {
       foreground: 'hsl(222.2 47.4% 11.2%)',
     },
   },
-  
-  // Dark mode colors
+
   dark: {
     colors: {
       primary: {
@@ -110,7 +108,6 @@ export const theme = {
     },
   },
 
-  // Typography
   typography: {
     fontFamily: {
       sans: ['var(--font-sans)', 'sans-serif'],
@@ -144,7 +141,6 @@ export const theme = {
     },
   },
 
-  // Spacing
   spacing: {
     px: '1px',
     0: '0',
@@ -183,7 +179,6 @@ export const theme = {
     96: '24rem',
   },
 
-  // Border radius
   borderRadius: {
     none: '0',
     sm: '0.125rem',
@@ -196,7 +191,6 @@ export const theme = {
     full: '9999px',
   },
 
-  // Box shadow
   boxShadow: {
     sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
     DEFAULT: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
@@ -208,7 +202,6 @@ export const theme = {
     none: 'none',
   },
 
-  // Z-index
   zIndex: {
     auto: 'auto',
     0: '0',
@@ -219,7 +212,6 @@ export const theme = {
     50: '50',
   },
 
-  // Transitions
   transition: {
     DEFAULT: 'all 0.2s ease-in-out',
     colors: 'color, background-color, border-color, text-decoration-color, fill, stroke 0.2s ease-in-out',
@@ -228,7 +220,6 @@ export const theme = {
     transform: 'transform 0.2s ease-in-out',
   },
 
-  // Breakpoints
   screens: {
     sm: '640px',
     md: '768px',
@@ -237,7 +228,6 @@ export const theme = {
     '2xl': '1536px',
   },
 
-  // Container
   container: {
     center: true,
     padding: '2rem',
@@ -251,17 +241,17 @@ export const theme = {
   },
 } as const;
 
-export type Theme = typeof theme;
+export type Theme = 'light' | 'dark';
 
-export function getThemeColor(theme: 'light' | 'dark', colorPath: string) {
+export function getThemeColor(theme: Theme, colorPath: string) {
   const path = colorPath.split('.');
-  let current: any = theme === 'dark' ? theme.dark?.colors : theme.colors;
-  
+  let current: any = theme === 'dark' ? themes.dark.colors : themes.colors;
+
   if (!current) {
     console.warn(`Theme or colors not found`);
     return 'currentColor';
   }
-  
+
   for (const key of path) {
     if (current[key] === undefined) {
       console.warn(`Color '${colorPath}' not found in theme`);
@@ -269,14 +259,14 @@ export function getThemeColor(theme: 'light' | 'dark', colorPath: string) {
     }
     current = current[key];
   }
-  
+
   return current;
 }
 
-export function getTextColor(theme: 'light' | 'dark') {
-  return theme === 'dark' ? theme.dark?.colors?.foreground || '#ffffff' : theme.colors?.foreground || '#000000';
+export function getTextColor(theme: Theme) {
+  return theme === 'dark' ? themes.dark.colors.foreground || '#ffffff' : themes.colors.foreground || '#000000';
 }
 
-export function getBackgroundColor(theme: 'light' | 'dark') {
-  return theme === 'dark' ? theme.dark?.colors?.background || '#000000' : theme.colors?.background || '#ffffff';
+export function getBackgroundColor(theme: Theme) {
+  return theme === 'dark' ? themes.dark.colors.background || '#000000' : themes.colors.background || '#ffffff';
 }

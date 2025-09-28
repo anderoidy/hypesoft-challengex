@@ -1,14 +1,12 @@
 using System;
 
-namespace Hypesoft.Domain.Common.Interfaces;
-
-public interface IAuditableEntity
+namespace Hypesoft.Domain.Common.Interfaces
 {
-    string? CreatedBy { get; set; }
-
-    DateTimeOffset CreatedAt { get; set; }
-
-    string? ModifiedBy { get; set; }
-
-    DateTimeOffset? ModifiedAt { get; set; }
+    public interface IAuditableEntity
+    {
+        string? CreatedBy { get; }
+        DateTimeOffset CreatedAt { get; }
+        string? ModifiedBy { get; }
+        DateTimeOffset? ModifiedAt { get; }
+    }
 }

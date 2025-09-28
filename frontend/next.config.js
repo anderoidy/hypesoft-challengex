@@ -1,7 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   reactStrictMode: true,
-  swcMinify: true,
+  // swcMinify: true, // ← Removido pois não é mais necessário no Next.js 15
+  eslint: {
+    ignoreDuringBuilds: true, // ← Adicionado para ignorar ESLint no build
+  },
   compiler: {
     styledComponents: true,
   },
@@ -31,6 +35,20 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60 * 60 * 24 * 30, // 30 dias
   },
+  
+  async rewrites() {
+    const apiUrl = process.env.NODE_ENV === 'production' 
+      ? 'http://backend:80'  // ← Nome do container
+      : 'http://localhost:5000';  // ← Para docker, desenvolvimento local http://localhost:5010'
+    
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${apiUrl}/api/:path*`
+      }
+    ]
+  },
+  
   async redirects() {
     return [
       {

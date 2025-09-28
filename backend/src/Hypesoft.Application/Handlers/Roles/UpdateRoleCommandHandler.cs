@@ -16,19 +16,13 @@ namespace Hypesoft.Application.Handlers.Roles
         private readonly RoleManager<ApplicationRole> _roleManager;
         private readonly ILogger<UpdateRoleCommandHandler> _logger;
 
-        public UpdateRoleCommandHandler(
-            RoleManager<ApplicationRole> roleManager,
-            ILogger<UpdateRoleCommandHandler> logger
-        )
+        public UpdateRoleCommandHandler(RoleManager<ApplicationRole> roleManager, ILogger<UpdateRoleCommandHandler> logger)
         {
             _roleManager = roleManager ?? throw new ArgumentNullException(nameof(roleManager));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<Result<Guid>> Handle(
-            UpdateRoleCommand request,
-            CancellationToken cancellationToken
-        )
+        public async Task<Result<Guid>> Handle(UpdateRoleCommand request, CancellationToken cancellationToken)
         {
             try
             {
@@ -55,13 +49,8 @@ namespace Hypesoft.Application.Handlers.Roles
                     var roleExists = await _roleManager.RoleExistsAsync(request.Name);
                     if (roleExists)
                     {
-                        _logger.LogWarning(
-                            "A role with name {RoleName} already exists",
-                            request.Name
-                        );
-                        return Result<Guid>.Conflict(
-                            $"A role with name '{request.Name}' already exists"
-                        );
+                        _logger.LogWarning("A role with name {RoleName} already exists", request.Name);
+                        return Result<Guid>.Conflict($"A role with name '{request.Name}' already exists");
                     }
                 }
 
@@ -75,22 +64,14 @@ namespace Hypesoft.Application.Handlers.Roles
                 if (!result.Succeeded)
                 {
                     var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                    _logger.LogError(
-                        "Failed to update role {RoleName}: {Errors}",
-                        role.Name,
-                        errors
-                    );
+                    _logger.LogError("Failed to update role {RoleName}: {Errors}", role.Name, errors);
                     return Result<Guid>.Error($"Failed to update role: {errors}");
                 }
 
                 // Converter ID para Guid se necessário
                 if (Guid.TryParse(role.Id.ToString(), out var roleGuid))
                 {
-                    _logger.LogInformation(
-                        "Successfully updated role {RoleName} with ID {RoleId}",
-                        role.Name,
-                        roleGuid
-                    );
+                    _logger.LogInformation("Successfully updated role {RoleName} with ID {RoleId}", role.Name, roleGuid);
                     return Result<Guid>.Success(roleGuid);
                 }
                 else
@@ -101,15 +82,8 @@ namespace Hypesoft.Application.Handlers.Roles
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Error updating role with ID {RoleId}: {ErrorMessage}",
-                    request.Id,
-                    ex.Message
-                );
-                return Result<Guid>.Error(
-                    $"An error occurred while updating the role: {ex.Message}"
-                );
+                _logger.LogError(ex, "Error updating role with ID {RoleId}: {ErrorMessage}", request.Id, ex.Message);
+                return Result<Guid>.Error($"An error occurred while updating the role: {ex.Message}");
             }
         }
     }

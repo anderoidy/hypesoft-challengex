@@ -57,6 +57,12 @@ const sidebarItems: SidebarItem[] = [
       },
     ],
   },
+  // Adicione esta entrada no menu, depois de "Products"
+  {
+    href: '/categories',
+    title: 'Categorias', 
+    icon: <FiTag />, // Importe: import { FiTag } from 'react-icons/fi'
+  },
   {
     title: 'Customers',
     href: '/customers',
@@ -103,7 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const isActive = (href: string) => {
-    return pathname === href || pathname.startsWith(`${href}/`);
+    return pathname === href || pathname?.startsWith(`${href}/`);
   };
 
   const renderSidebarItem = (item: SidebarItem, depth = 0) => {

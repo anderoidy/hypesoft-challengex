@@ -11,23 +11,24 @@ public class TestBase : IDisposable
     public TestBase()
     {
         var services = new ServiceCollection();
-        
+
         // Adicionar logging
         services.AddLogging();
-        
+
         // Configurar banco em memória
         services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
-        
+            options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+        );
+
         // Registrar repositórios
         services.AddScoped<IUserRepository, UserRepository>();
-        
+
         // Build do ServiceProvider
         ServiceProvider = services.BuildServiceProvider();
-        
+
         // Obter DbContext
         DbContext = ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        
+
         // Criar banco
         DbContext.Database.EnsureCreated();
     }

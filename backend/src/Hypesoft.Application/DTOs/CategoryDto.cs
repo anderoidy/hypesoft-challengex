@@ -5,7 +5,7 @@ public record CategoryDto(
     string Name,
     string? Description = null,
     string? ImageUrl = null,
-    bool IsMainCategory = true,
+    bool IsActive = true,
     Guid? ParentCategoryId = null,
     string? ParentCategoryName = null
 )

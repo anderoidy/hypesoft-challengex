@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Ardalis.Specification;
 using Ardalis.Specification.EntityFrameworkCore;
 using Hypesoft.Domain.Entities;
 using Hypesoft.Domain.Repositories;
@@ -23,13 +24,14 @@ namespace Hypesoft.Infrastructure.Repositories
             _context = context;
         }
 
-        // ✅ IMPLEMENTAR TODOS OS MÉTODOS DA INTERFACE IProductRepository:
+        // Implementação explícita da interface para garantir retorno correto
+        async Task<IReadOnlyList<Product>> IProductRepository.ListAsync(ISpecification<Product> specification, CancellationToken cancellationToken)
+        {
+            var list = await base.ListAsync(specification, cancellationToken);
+            return list.ToList().AsReadOnly();
+        }
 
-        public async Task<IEnumerable<Product>> GetAllAsync(
-            int pageNumber = 1,
-            int pageSize = 10,
-            string? search = null
-        )
+        public async Task<IEnumerable<Product>> GetAllAsync(int pageNumber = 1, int pageSize = 10, string? search = null)
         {
             try
             {
@@ -38,21 +40,17 @@ namespace Hypesoft.Infrastructure.Repositories
                 if (!string.IsNullOrEmpty(search))
                 {
                     query = query.Where(p =>
-                        (p.Name != null && p.Name.Contains(search))
-                        || (p.Description != null && p.Description.Contains(search))
+                        (p.Name != null && p.Name.Contains(search)) ||
+                        (p.Description != null && p.Description.Contains(search))
                     );
                 }
 
-                var products = await query
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToListAsync();
+                var products = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
 
                 return products ?? new List<Product>();
             }
             catch (Exception ex)
             {
-                //Logger.LogError(ex, "Erro ao buscar produtos"); // ✅ USO CORRETO
                 Logger.LogError(ex, "Erro ao buscar produtos");
                 return new List<Product>();
             }
@@ -66,7 +64,7 @@ namespace Hypesoft.Infrastructure.Repositories
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Erro ao buscar produto por ID: {Id}", id); // ✅ USO CORRETO
+                Logger.LogError(ex, "Erro ao buscar produto por ID: {Id}", id);
                 return null;
             }
         }
@@ -80,8 +78,8 @@ namespace Hypesoft.Infrastructure.Repositories
                 if (!string.IsNullOrEmpty(search))
                 {
                     query = query.Where(p =>
-                        (p.Name != null && p.Name.Contains(search))
-                        || (p.Description != null && p.Description.Contains(search))
+                        (p.Name != null && p.Name.Contains(search)) ||
+                        (p.Description != null && p.Description.Contains(search))
                     );
                 }
 
@@ -89,7 +87,7 @@ namespace Hypesoft.Infrastructure.Repositories
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Erro ao contar produtos"); // ✅ USO CORRETO
+                Logger.LogError(ex, "Erro ao contar produtos");
                 return 0;
             }
         }
@@ -122,12 +120,7 @@ namespace Hypesoft.Infrastructure.Repositories
             }
         }
 
-        // ✅ MÉTODOS ESPECÍFICOS ADICIONAIS:
-
-        public async Task<Product?> GetBySkuAsync(
-            string sku,
-            CancellationToken cancellationToken = default
-        )
+        public async Task<Product?> GetBySkuAsync(string sku, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -139,15 +132,12 @@ namespace Hypesoft.Infrastructure.Repositories
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Erro ao buscar produto por SKU: {Sku}", sku); // ✅ USO CORRETO
+                Logger.LogError(ex, "Erro ao buscar produto por SKU: {Sku}", sku);
                 return null;
             }
         }
 
-        public async Task<Product?> GetBySlugAsync(
-            string slug,
-            CancellationToken cancellationToken = default
-        )
+        public async Task<Product?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -159,16 +149,12 @@ namespace Hypesoft.Infrastructure.Repositories
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Erro ao buscar produto por Slug: {Slug}", slug); // ✅ USO CORRETO
+                Logger.LogError(ex, "Erro ao buscar produto por Slug", slug);
                 return null;
             }
         }
 
-        public async Task<bool> IsSkuUniqueAsync(
-            string sku,
-            Guid? excludeId = null,
-            CancellationToken cancellationToken = default
-        )
+        public async Task<bool> IsSkuUniqueAsync(string sku, Guid? excludeId = null, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -188,7 +174,7 @@ namespace Hypesoft.Infrastructure.Repositories
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Erro ao verificar unicidade do SKU: {Sku}", sku); // ✅ USO CORRETO
+                Logger.LogError(ex, "Erro ao verificar unicidade do SKU: {Sku}", sku);
                 return false;
             }
         }

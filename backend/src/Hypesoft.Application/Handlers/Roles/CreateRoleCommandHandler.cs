@@ -47,7 +47,7 @@ namespace Hypesoft.Application.Handlers.Roles
                 {
                     Name = request.Name,
                     Description = request.Description,
-                    CreatedBy = request.CreatedBy ?? "System",
+                    CreatedBy = "System",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                 };

@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Result;
 using Hypesoft.Application.Commands.Products;
-using Hypesoft.Domain.Entities;
+using Hypesoft.Domain.Interfaces;
 using Hypesoft.Domain.Repositories;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -20,8 +20,8 @@ namespace Hypesoft.Application.Handlers.Products
             ILogger<DeleteProductCommandHandler> logger
         )
         {
-            _productRepository = productRepository ?? throw new ArgumentNullException(nameof(productRepository));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _productRepository = productRepository;
+            _logger = logger;
         }
 
         public async Task<Result<bool>> Handle(
@@ -44,7 +44,8 @@ namespace Hypesoft.Application.Handlers.Products
                     return Result<bool>.NotFound($"Product with ID {request.Id} not found.");
                 }
 
-                await _productRepository.DeleteAsync(request.Id);
+                // Passar ID para DeleteAsync conforme esperado
+                await _productRepository.DeleteAsync(product.Id);
 
                 _logger.LogInformation(
                     "Successfully deleted product with ID: {ProductId}",

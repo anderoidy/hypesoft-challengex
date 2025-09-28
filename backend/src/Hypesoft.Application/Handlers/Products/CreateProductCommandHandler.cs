@@ -5,6 +5,7 @@ using Ardalis.Result;
 using AutoMapper;
 using Hypesoft.Application.Commands.Products;
 using Hypesoft.Domain.Entities;
+using Hypesoft.Domain.Interfaces;
 using Hypesoft.Domain.Repositories;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -40,92 +41,40 @@ namespace Hypesoft.Application.Handlers.Products
         {
             try
             {
-                _logger.LogInformation(
-                    "🔄 Iniciando criação do produto: {ProductName}",
-                    request.Name
-                );
+                _logger.LogInformation("Creating new product: {ProductName}", request.Name);
 
-                // Valida dados básicos
-                if (string.IsNullOrWhiteSpace(request.Name))
-                {
-                    _logger.LogWarning("❌ Nome do produto é obrigatório");
-                    return Result<Guid>.Invalid(
-                        new[] { new ValidationError("O nome do produto é obrigatório") }
-                    );
-                }
-
-                if (request.Price < 0)
-                {
-                    _logger.LogWarning(
-                        "❌ Preço do produto não pode ser negativo: {Price}",
-                        request.Price
-                    );
-                    return Result<Guid>.Invalid(
-                        new[] { new ValidationError("O preço do produto não pode ser negativo") }
-                    );
-                }
-
-                _logger.LogInformation("✅ Validações básicas passaram");
-
-                // Verifica se a categoria existe
-                _logger.LogInformation(
-                    "🔍 Verificando se categoria {CategoryId} existe",
-                    request.CategoryId
-                );
+                // Check if category exists
                 var category = await _categoryRepository.GetByIdAsync(request.CategoryId);
-
                 if (category == null)
                 {
                     _logger.LogWarning(
-                        "❌ Categoria com ID {CategoryId} não encontrada",
+                        "Category with ID {CategoryId} not found",
                         request.CategoryId
                     );
                     return Result<Guid>.NotFound(
-                        $"Categoria com ID {request.CategoryId} não encontrada"
+                        $"Category with ID {request.CategoryId} not found"
                     );
                 }
 
-                _logger.LogInformation("✅ Categoria {CategoryName} encontrada", category.Name);
+                // Map command to entity
+                var product = _mapper.Map<Product>(request);
 
-                // Mapeia o comando para entidade
-                Product product;
-                try
-                {
-                    _logger.LogInformation("🔄 Mapeando CreateProductCommand para Product");
-                    product = _mapper.Map<Product>(request);
-                    _logger.LogInformation("✅ Mapeamento realizado com sucesso");
-                }
-                catch (Exception mapEx)
-                {
-                    _logger.LogError(mapEx, "❌ Erro ao mapear CreateProductCommand para Product");
-                    return Result<Guid>.Error($"Erro no mapeamento: {mapEx.Message}");
-                }
+                // Set audit data through method, no direct property assignment
+                product.SetLastModifiedBy(request.CreatedBy ?? "system");
 
-                // Campos de auditoria
-                product.CreatedAt = DateTime.UtcNow;
-                product.UpdatedAt = DateTime.UtcNow;
+                // Add to repository (passing only product as param)
+                await _productRepository.AddAsync(product);
 
-                _logger.LogInformation("🔄 Adicionando produto no repositório");
-
-                // Adiciona no repositório
-                try
-                {
-                    await _productRepository.AddAsync(product);
-                    _logger.LogInformation("✅ Produto adicionado no repositório com sucesso");
-                }
-                catch (Exception repoEx)
-                {
-                    _logger.LogError(repoEx, "❌ Erro ao adicionar produto no repositório");
-                    return Result<Guid>.Error($"Erro no repositório: {repoEx.Message}");
-                }
-
-                _logger.LogInformation("✅ Produto criado com sucesso! ID: {ProductId}", product.Id);
+                _logger.LogInformation(
+                    "Successfully created product with ID {ProductId}",
+                    product.Id
+                );
                 return Result<Guid>.Success(product.Id);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "🔥 Erro inesperado ao criar produto");
-                return Result<Guid>.Error($"Erro inesperado: {ex.Message}");
+                _logger.LogError(ex, "Error creating product: {ErrorMessage}", ex.Message);
+                return Result<Guid>.Error(ex.Message);
             }
         }
     }
