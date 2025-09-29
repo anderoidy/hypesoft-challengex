@@ -27,8 +27,15 @@ namespace Hypesoft.Application.Handlers.Products
             CancellationToken cancellationToken
         )
         {
-            var spec = new AllProductsSpecification();
-            var products = await _productRepository.ListAsync(spec, cancellationToken);
+            // Get paginated products with search
+            var products = await _productRepository.GetAllAsync(
+                request.PageNumber, 
+                request.PageSize, 
+                request.SearchTerm
+            );
+
+            // Get total count for pagination
+            var totalCount = await _productRepository.GetTotalCountAsync(request.SearchTerm);
 
             var productDtos = products
                 .Select(p => new ProductDto(
@@ -44,13 +51,18 @@ namespace Hypesoft.Application.Handlers.Products
                     IsFeatured: p.IsFeatured,
                     IsPublished: p.IsPublished,
                     PublishedAt: p.PublishedAt,
-                    CategoryId: p.CategoryId, // Removido ?? Guid.Empty se não for nullable
+                    CategoryId: p.CategoryId,
                     CategoryName: p.Category?.Name
                 ))
                 .ToList();
 
             return Result.Success(
-                new PaginatedList<ProductDto>(productDtos, productDtos.Count, 1, 10)
+                new PaginatedList<ProductDto>(
+                    productDtos, 
+                    totalCount, 
+                    request.PageNumber, 
+                    request.PageSize
+                )
             );
         }
     }

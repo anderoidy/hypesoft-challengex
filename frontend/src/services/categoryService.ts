@@ -117,17 +117,27 @@ export const categoryService = {
   },
 
   // Atualizar
-  async update(id: string, data: UpdateCategoryDto): Promise<Category> {
-    console.log('🔧 Atualizando categoria:', { id, data });
-    return {
-      id,
+async update(id: string, data: UpdateCategoryDto): Promise<Category> {
+  try {
+    console.log('🔧 Atualizando categoria na API:', { id, data });
+    
+    const requestBody = {
+      id: id,
       name: data.name,
-      description: data.description || '',
-      isActive: true,
-      createdAt: new Date(Date.now() - 24*60*60*1000).toISOString(),
-      updatedAt: new Date().toISOString()
+      description: data.description || "",
+      isActive: data.isActive ?? true,
+      modifiedBy: "Admin User"
     };
-  },
+    
+    const response = await api.put(`/Categories/${id}`, requestBody);
+    console.log('✅ Categoria atualizada na API:', response.data);
+    return response.data;
+    
+  } catch (error: any) {
+    console.error('❌ Erro ao atualizar categoria:', error);
+    throw new Error(error.response?.data?.message || 'Erro ao atualizar categoria');
+  }
+},
 
   // Deletar
   delete: async (id: string): Promise<void> => {

@@ -25,13 +25,20 @@ namespace Hypesoft.Infrastructure.Repositories
         }
 
         // Implementação explícita da interface para garantir retorno correto
-        async Task<IReadOnlyList<Product>> IProductRepository.ListAsync(ISpecification<Product> specification, CancellationToken cancellationToken)
+        async Task<IReadOnlyList<Product>> IProductRepository.ListAsync(
+            ISpecification<Product> specification,
+            CancellationToken cancellationToken
+        )
         {
             var list = await base.ListAsync(specification, cancellationToken);
             return list.ToList().AsReadOnly();
         }
 
-        public async Task<IEnumerable<Product>> GetAllAsync(int pageNumber = 1, int pageSize = 10, string? search = null)
+        public async Task<IEnumerable<Product>> GetAllAsync(
+            int pageNumber = 1,
+            int pageSize = 10,
+            string? search = null
+        )
         {
             try
             {
@@ -40,12 +47,15 @@ namespace Hypesoft.Infrastructure.Repositories
                 if (!string.IsNullOrEmpty(search))
                 {
                     query = query.Where(p =>
-                        (p.Name != null && p.Name.Contains(search)) ||
-                        (p.Description != null && p.Description.Contains(search))
+                        (p.Name != null && p.Name.Contains(search))
+                        || (p.Description != null && p.Description.Contains(search))
                     );
                 }
 
-                var products = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+                var products = await query
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
 
                 return products ?? new List<Product>();
             }
@@ -78,8 +88,8 @@ namespace Hypesoft.Infrastructure.Repositories
                 if (!string.IsNullOrEmpty(search))
                 {
                     query = query.Where(p =>
-                        (p.Name != null && p.Name.Contains(search)) ||
-                        (p.Description != null && p.Description.Contains(search))
+                        (p.Name != null && p.Name.Contains(search))
+                        || (p.Description != null && p.Description.Contains(search))
                     );
                 }
 
@@ -120,7 +130,10 @@ namespace Hypesoft.Infrastructure.Repositories
             }
         }
 
-        public async Task<Product?> GetBySkuAsync(string sku, CancellationToken cancellationToken = default)
+        public async Task<Product?> GetBySkuAsync(
+            string sku,
+            CancellationToken cancellationToken = default
+        )
         {
             try
             {
@@ -137,7 +150,10 @@ namespace Hypesoft.Infrastructure.Repositories
             }
         }
 
-        public async Task<Product?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default)
+        public async Task<Product?> GetBySlugAsync(
+            string slug,
+            CancellationToken cancellationToken = default
+        )
         {
             try
             {
@@ -154,7 +170,11 @@ namespace Hypesoft.Infrastructure.Repositories
             }
         }
 
-        public async Task<bool> IsSkuUniqueAsync(string sku, Guid? excludeId = null, CancellationToken cancellationToken = default)
+        public async Task<bool> IsSkuUniqueAsync(
+            string sku,
+            Guid? excludeId = null,
+            CancellationToken cancellationToken = default
+        )
         {
             try
             {

@@ -200,19 +200,7 @@ namespace Hypesoft.Infrastructure.Repositories
                     throw new ArgumentNullException(nameof(category));
                 }
 
-                var existingCategory = await GetByIdAsync(category.Id, cancellationToken);
-                if (existingCategory == null)
-                {
-                    _logger.LogWarning(
-                        "Categoria não encontrada para atualização: {CategoryId}",
-                        category.Id
-                    );
-                    throw new KeyNotFoundException(
-                        $"Categoria com ID {category.Id} não encontrada"
-                    );
-                }
-
-                _context.Entry(existingCategory).CurrentValues.SetValues(category);
+                _context.Categories.Update(category);
                 await _context.SaveChangesAsync(cancellationToken);
 
                 _logger.LogInformation(
