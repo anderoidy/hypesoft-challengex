@@ -1092,7 +1092,7 @@ public class ProductService : IProductService
 }
 ```
 
-#### Frontend (TypeScript/React)
+#### Frontend (TypeScript/React/Next.js)
 
 ```typescript
 // Boas práticas
@@ -1294,7 +1294,7 @@ O software é fornecido "como está", sem garantia de qualquer tipo.
 #### ✅ Backend
 - [x] Arquitetura limpa com separação de camadas
 - [x] Implementação do padrão CQRS com MediatR
-- [x] Configuração do MongoDB com repositórios
+- [x] Entity Framework Core com MongoDB provider
 - [x] Autenticação JWT com Keycloak
 - [x] API RESTful com controllers
 - [x] Documentação Swagger/OpenAPI
@@ -1317,11 +1317,12 @@ O software é fornecido "como está", sem garantia de qualquer tipo.
 - [x] Componentes reutilizáveis
 - [x] Formulários com validação
 - [x] Gráficos interativos
-- [x] Internacionalização (i18n)
+- [ ] Internacionalização (i18n)
 - [x] Otimização de performance
 - [x] Tratamento de erros
 - [x] Loading states
 - [x] Dockerização
+- [x] Exportação de dados (PDF)
 
 #### ✅ Infraestrutura
 - [x] Docker Compose completo
@@ -1338,7 +1339,6 @@ O software é fornecido "como está", sem garantia de qualquer tipo.
 
 **Versão 1.1 (Próximo Sprint)**
 - [ ] Relatórios avançados
-- [ ] Exportação de dados (PDF, Excel)
 - [ ] Notificações em tempo real
 - [ ] Audit trail de ações
 
@@ -1377,9 +1377,12 @@ O software é fornecido "como está", sem garantia de qualquer tipo.
 
 - **Issues**: [GitHub Issues](https://github.com/anderoidy/hypesoft-challengex/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/anderoidy/hypesoft-challengex/discussions)
-- **Email**: dev@hypesoft.com
+- **Email**: anderoidy@gmail.com/ ander.sistemasweb@gmail.com/ contato@apssistemas.com.br
 - **Documentation**: [Wiki](https://github.com/anderoidy/hypesoft-challengex/wiki)
+- **GitHub**: [GitHub](https://github.com/anderoidy/hypesoft-challengex)
+- **LinkedIn**: [LinkedIn](https://www.linkedin.com/in/andersistemasweb)
+- **whatsapp**: [whatsapp](https://wa.me/55 (15) 99750-8466)
 
 ---
 
-**Desenvolvido com ❤️ pela equipe Hypesoft**
+**Desenvolvido com ❤️ por Anderson Pereira**
