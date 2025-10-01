@@ -112,11 +112,11 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, className }) => {
               <DropdownMenuSeparator />
               <DropdownMenuItem className="cursor-pointer">
                 <FiUser className="mr-2 size-4" />
-                <span>Profile</span>
+                <span>Perfil</span>
               </DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer">
                 <FiSettings className="mr-2 size-4" />
-                <span>Settings</span>
+                <span>Configurações</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
@@ -124,7 +124,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, className }) => {
                 onClick={handleLogout}
               >
                 <FiLogOut className="mr-2 size-4" />
-                <span>Log out</span>
+                <span>Sair</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

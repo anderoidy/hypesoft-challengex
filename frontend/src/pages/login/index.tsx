@@ -9,7 +9,7 @@ export default function LoginPage() {
     password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error] = useState('');
   
   const { login, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -25,13 +25,13 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    console.log('');
 
     try {
       await login(credentials);
       router.push('/dashboard');
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Erro desconhecido');
+      console.error(error instanceof Error ? error.message : 'Erro desconhecido');
     } finally {
       setIsLoading(false);
     }
@@ -60,7 +60,7 @@ export default function LoginPage() {
               <span className="text-white font-bold text-xl">H</span>
             </div>
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Hypesoft Challenge
+              Hypesoft
             </h2>
             <p className="mt-2 text-gray-600 dark:text-gray-400">
               Entre com suas credenciais para acessar o sistema
@@ -70,7 +70,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Username
+                Usuário
               </label>
               <input
                 id="username"
@@ -86,7 +86,7 @@ export default function LoginPage() {
             
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Password
+                Senha
               </label>
               <input
                 id="password"
@@ -128,8 +128,8 @@ export default function LoginPage() {
               Credenciais de Demonstração:
             </p>
             <div className="text-sm text-center space-y-1">
-              <p><span className="font-medium">Username:</span> <code className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">testuser</code></p>
-              <p><span className="font-medium">Password:</span> <code className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">123456</code></p>
+              <p><span className="font-medium">Usuário:</span> <code className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">testuser</code></p>
+              <p><span className="font-medium">Senha:</span> <code className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">123456</code></p>
             </div>
           </div>
         </div>

@@ -13,7 +13,7 @@ export function useProducts(pageNumber = 1, pageSize = 10, search = '', category
     hasNextPage: false
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
 
   // ✅ FUNÇÃO DE ENRIQUECIMENTO CORRIGIDA
   const enrichProductsWithCategories = async (products: Product[]) => {
@@ -49,8 +49,7 @@ export function useProducts(pageNumber = 1, pageSize = 10, search = '', category
   const fetchProducts = async () => {
     try {
       setIsLoading(true);
-      setError(null);
-      
+            
       console.log('🔍 === USEPRODUCTS DEBUG ===');
       console.log('📂 categoryId recebido:', categoryId);
       
@@ -75,7 +74,7 @@ export function useProducts(pageNumber = 1, pageSize = 10, search = '', category
       });
       
     } catch (err: any) {
-      setError(err.message || 'Erro ao carregar produtos');
+      console.error(err.message || 'Erro ao carregar produtos');
     } finally {
       setIsLoading(false);
     }

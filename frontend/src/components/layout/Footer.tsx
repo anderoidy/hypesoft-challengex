@@ -9,7 +9,7 @@ export function Footer() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
           <p className="text-sm text-muted-foreground">
-            &copy; {currentYear} Hypesoft Challenge. All rights reserved.
+            &copy; {currentYear} Hypesoft. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <Link 

@@ -3,10 +3,11 @@ import { useState, useEffect } from 'react';
 interface Product {
   id: string;
   name: string;
-  price: number;
-  stockQuantity: number;
+  price: number | string;
+  stockQuantity: number | string;
   description?: string;
   sku?: string;
+  stock?: number | string;
 }
 
 interface DashboardMetrics {
@@ -35,8 +36,8 @@ export const useDashboardMetrics = () => {
       setMetrics(prev => ({ ...prev, loading: true, error: null }));
 
       // ✅ DEBUG - Log dos valores
-      const token = localStorage.getItem('token');
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const token = localStorage.getItem('accessToken');
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:80';
       
       console.log('🔍 Debug Dashboard:');
       console.log('Token existe:', !!token);
@@ -74,22 +75,60 @@ export const useDashboardMetrics = () => {
       const data = await response.json();
       console.log('📊 Data received:', data);
       
-      // ✅ VERIFICAR ESTRUTURA DOS DADOS
-      const products: Product[] = data.items || data || [];
+      // ✅ VERIFICAR ESTRUTURA DOS DADOS - MELHORADO
+      const products: Product[] = data.items || data.value?.items || data.value?.data || data.value?.products || data.items || data.data || data.products || [];
       console.log('📦 Produtos encontrados:', products.length);
 
-      // ✅ CÁLCULOS
+      // ✅ CÁLCULOS CORRIGIDOS
       const totalProducts = products.length;
       const totalValue = products.reduce((sum, product) => {
-        const price = Number(product.price) || 0;
-        const stock = Number(product.stockQuantity) || 0;
+        // Converter price para número, tratando tanto string quanto number
+        let price = 0;
+        if (typeof product.price === 'string') {
+          // Remove símbolos de moeda e espaços, trata formatação brasileira
+          let cleanPrice = product.price
+            .replace(/R\$\s?/g, '') // Remove R$ 
+            .replace(/\./g, '')     // Remove pontos de milhar
+            .replace(',', '.')      // Troca vírgula decimal por ponto
+            .trim();
+          price = parseFloat(cleanPrice) || 0;
+        } else if (typeof product.price === 'number') {
+          price = product.price;
+        }
+        
+        // Converter stockQuantity para número (verifica ambos os campos)
+        const stock = typeof product.stockQuantity === 'number' ? product.stockQuantity : 
+                     typeof product.stockQuantity === 'string' ? parseFloat(product.stockQuantity) || 0 :
+                     typeof product.stock === 'number' ? product.stock :
+                     typeof product.stock === 'string' ? parseFloat(product.stock) || 0 : 0;
+        
         return sum + (price * stock);
       }, 0);
       
       const totalRevenue = totalValue * 0.7;
-      const lowStockProducts = products.filter(p => (Number(p.stockQuantity) || 0) < 10).length;
+      const lowStockProducts = products.filter(p => {
+        const stock = typeof p.stockQuantity === 'number' ? p.stockQuantity : 
+                     typeof p.stockQuantity === 'string' ? parseFloat(p.stockQuantity) || 0 :
+                     typeof p.stock === 'number' ? p.stock :
+                     typeof p.stock === 'string' ? parseFloat(p.stock) || 0 : 0;
+        return stock < 10;
+      }).length;
+      
       const averagePrice = totalProducts > 0 
-        ? products.reduce((sum, p) => sum + (Number(p.price) || 0), 0) / totalProducts 
+        ? products.reduce((sum, p) => {
+            let price = 0;
+            if (typeof p.price === 'string') {
+              let cleanPrice = p.price
+                .replace(/R\$\s?/g, '')
+                .replace(/\./g, '')
+                .replace(',', '.')
+                .trim();
+              price = parseFloat(cleanPrice) || 0;
+            } else if (typeof p.price === 'number') {
+              price = p.price;
+            }
+            return sum + price;
+          }, 0) / totalProducts 
         : 0;
 
       console.log('📊 Métricas calculadas:', {

@@ -18,7 +18,7 @@ const EditCategoryPage = () => {
     const [category, setCategory] = useState<Category | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [error] = useState<string | null>(null);
     const [formData, setFormData] = useState<UpdateCategoryDto>({
       id: '',
       name: '',
@@ -37,7 +37,6 @@ const EditCategoryPage = () => {
       try {
         console.log('🚀 Carregando categoria:', id);
         setLoading(true);
-        setError(null);
         
         const data = await categoryService.getById(id as string);
         console.log('✅ Categoria carregada:', data);
@@ -51,7 +50,7 @@ const EditCategoryPage = () => {
         });
       } catch (error) {
         console.error('❌ Erro ao carregar categoria:', error);
-        setError('Nao foi possivel carregar a categoria. Tente novamente.');
+        console.error('Nao foi possivel carregar a categoria. Tente novamente.');
       } finally {
         setLoading(false);
       }
@@ -61,8 +60,7 @@ const EditCategoryPage = () => {
         e.preventDefault();
         try {
           setSaving(true);
-          setError(null);
-          
+                    
           console.log('💾 Salvando alteracoes:', formData);
           await categoryService.update(formData.id, formData);
           
@@ -70,7 +68,7 @@ const EditCategoryPage = () => {
           router.push('/categories?refresh=true');
         } catch (error) {
           console.error('❌ Erro ao atualizar categoria:', error);
-          setError('Nao foi possivel atualizar a categoria. Tente novamente.');
+          console.error('Nao foi possivel atualizar a categoria. Tente novamente.');
         } finally {
           setSaving(false);
         }

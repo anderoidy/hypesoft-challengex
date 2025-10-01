@@ -16,6 +16,7 @@ import { FiDollarSign, FiShoppingBag, FiTrendingUp, FiUsers, FiPackage } from 'r
 
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 
 // Register ChartJS components
 ChartJS.register(
@@ -151,7 +152,7 @@ const StatCard: React.FC<StatCardProps> = ({
           <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{value}</p>
         )}
         <p className={`mt-1 text-sm ${parseFloat(change) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-          {parseFloat(change) >= 0 ? '↑' : '↓'} {change} vs last month
+          {parseFloat(change) >= 0 ? '↑' : '↓'} {change} em comparação com o mês passado
         </p>
       </div>
       <div className="bg-primary-50 dark:bg-primary-900 text-primary-600 dark:text-primary-400 rounded-lg p-3">
@@ -163,224 +164,12 @@ const StatCard: React.FC<StatCardProps> = ({
 
 const DashboardPage: React.FC = () => {
   // Estados para buscar produtos reais
-  const [productCount, setProductCount] = useState<number>(0);
-  const [totalValue, setTotalValue] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [debugInfo, setDebugInfo] = useState<string>('Inicializando...');
-  const [error, setError] = useState<string | null>(null);
+// Usar hook de métricas do dashboard
+const { totalProducts, totalValue, loading, error, refresh } = useDashboardMetrics();
+
 
   // Função para buscar produtos COM LOGS MELHORADOS
-  useEffect(() => {
-    let isMounted = true; // Evitar race conditions
-
-    const fetchProducts = async (): Promise<void> => {
-      try {
-        setLoading(true);
-        setError(null);
-        setDebugInfo('🔍 Verificando token...');
-
-        // Verificar se estamos no browser
-        if (typeof window === 'undefined') {
-          setDebugInfo('❌ Não está no browser');
-          return;
-        }
-
-        const token = localStorage.getItem('accessToken');
-        console.log('🔐 Token check:', {
-          exists: !!token,
-          length: token?.length,
-          firstChars: token?.substring(0, 20) + '...'
-        });
-
-        if (!token) {
-          setDebugInfo('❌ Token não encontrado no localStorage');
-          return;
-        }
-
-        setDebugInfo('✅ Token encontrado - fazendo requisição...');
-        
-        // Construir URL da API
-        const apiUrl: string = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5010';
-        const endpoint = '/api/Products';
-        const fullUrl = `${apiUrl}${endpoint}?page=1&pageSize=1000`;
-        
-        console.log('🌐 Fazendo requisição para:', fullUrl);
-        console.log('📋 Headers:', {
-          'Authorization': `Bearer ${token.substring(0, 20)}...`,
-          'Content-Type': 'application/json'
-        });
-
-        setDebugInfo(`🌐 Chamando: ${fullUrl}`);
-
-        const response = await fetch(fullUrl, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-        });
-
-        console.log('📡 Response:', {
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok,
-          headers: Object.fromEntries(response.headers.entries())
-        });
-
-        if (!isMounted) return; // Component foi desmontado
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ Erro HTTP:', {
-            status: response.status,
-            statusText: response.statusText,
-            body: errorText
-          });
-          
-          setError(`HTTP ${response.status}: ${response.statusText}`);
-          setDebugInfo(`❌ Erro ${response.status}: ${errorText}`);
-          return;
-        }
-
-        const data: ApiResponse = await response.json();
-        console.log('📦 Resposta completa da API:', data);
-        console.log('🏷️ Estrutura dos dados:', {
-          hasItems: 'items' in data,
-          hasData: 'data' in data,
-          hasValue: 'value' in data,
-          isSuccess: data.isSuccess,
-          hasDataFlag: data.hasData,
-          isArray: Array.isArray(data),
-          keys: Object.keys(data),
-          type: typeof data,
-          valueType: typeof data.value,
-          valueKeys: data.value ? Object.keys(data.value) : 'N/A'
-        });
-
-        // Verificar diferentes estruturas possíveis da sua API
-        let products: Product[] = [];
-        
-        // Estrutura da sua API: { value: {...}, isSuccess: true, hasData: boolean }
-        if (data.isSuccess && data.value) {
-          console.log('✅ API Success - Verificando value:', data.value);
-          
-          if (typeof data.value === 'object' && !Array.isArray(data.value)) {
-            if (data.value.items && Array.isArray(data.value.items)) {
-              products = data.value.items;
-              console.log('📦 Produtos encontrados em value.items:', products.length);
-            } else if (data.value.data && Array.isArray(data.value.data)) {
-              products = data.value.data;
-              console.log('📦 Produtos encontrados em value.data:', products.length);
-            } else if (data.value.products && Array.isArray(data.value.products)) {
-              products = data.value.products;
-              console.log('📦 Produtos encontrados em value.products:', products.length);
-            } else {
-              console.log('🔍 Estrutura do value:', data.value);
-              console.log('🔍 Chaves do value:', Object.keys(data.value || {}));
-            }
-          } else if (Array.isArray(data.value)) {
-            products = data.value;
-            console.log('📦 Produtos encontrados em value (array):', products.length);
-          }
-        } 
-        // Fallback para outras estruturas
-        else if (data.items && Array.isArray(data.items)) {
-          products = data.items;
-        } else if (data.data && Array.isArray(data.data)) {
-          products = data.data;
-        } else if (Array.isArray(data)) {
-          products = data as Product[];
-        } else {
-          console.warn('⚠️ Estrutura de dados não reconhecida:', {
-            isSuccess: data.isSuccess,
-            hasData: data.hasData,
-            valueExists: !!data.value,
-            dataStructure: data
-          });
-        }
-
-        console.log('📦 Produtos extraídos:', products);
-        console.log('🔢 Quantidade de produtos:', products.length);
-
-        if (!isMounted) return;
-
-        setProductCount(products.length);
-        
-        // Mensagem mais específica baseada no resultado
-        if (products.length === 0) {
-          if (data.isSuccess) {
-            setDebugInfo(`✅ Conectado à API - Nenhum produto cadastrado ainda`);
-          } else {
-            setDebugInfo(`❌ API retornou erro: ${data.successMessage || 'Erro desconhecido'}`);
-          }
-        } else {
-          setDebugInfo(`✅ ${products.length} produtos encontrados`);
-        }
-        
-        // Calcular valor total do estoque
-        if (products.length > 0) {
-          const total = products.reduce((sum: number, product: Product) => {
-            // Limpar e converter price
-            let priceValue: string | number = product.price;
-            let price = 0;
-            
-            if (typeof priceValue === 'string') {
-              // Se for string, remove R$ e espaços
-              let cleanPrice = priceValue
-                .replace(/R\$\s?/, '') // Remove R$ 
-                .trim();
-              price = parseFloat(cleanPrice) || 0;
-            } else if (typeof priceValue === 'number') {
-              // Se já for número, usa direto
-              price = priceValue;
-            }
-            
-            const stock = parseInt(String(product.stockQuantity || product.stock || 0));
-            const value = price * stock;
-            
-            console.log('💰 Produto - Debug detalhado:', {
-              name: product.name,
-              rawPrice: product.price,
-              typeOfPrice: typeof product.price,
-              finalPrice: price,
-              stock: stock,
-              calculation: `${price} × ${stock} = ${value}`,
-              value: `R$ ${value.toFixed(2)}`
-            });
-            
-            return sum + value;
-          }, 0);
-          
-          setTotalValue(total);
-          console.log('💰 CÁLCULO FINAL:', {
-            totalBruto: total,
-            totalFormatado: formatCurrency(total),
-            quantidadeProdutos: products.length
-          });
-        }
-
-      } catch (error) {
-        console.error('🚨 Erro na requisição completo:', error);
-        if (!isMounted) return;
-        
-        const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-        setError(errorMessage);
-        setDebugInfo(`🚨 Erro: ${errorMessage}`);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchProducts();
-
-    // Cleanup function
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  
 
   // Formatação brasileira
   const formatCurrency = (value: number): string => {
@@ -410,26 +199,26 @@ const DashboardPage: React.FC = () => {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
           <p className="text-gray-500 dark:text-gray-400">          
-            {productCount > 0 && <span className="ml-2 text-green-600 dark:text-green-400">({productCount} produtos cadastrados)</span>}
+            {totalProducts> 0 && <span className="ml-2 text-green-600 dark:text-green-400">({totalProducts} produtos cadastrados)</span>}
           </p>
         </div>
 
         {/* Stats Grid - COM DADOS REAIS DOS PRODUTOS */}
         <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           <StatCard 
-            title="Total Revenue" 
-            value="$24,780" 
+            title="Total de Receita" 
+            value={formatCurrency(totalValue)} 
             change="+12.5%" 
             icon={FiDollarSign} 
           />
           <StatCard 
-            title="Total Orders" 
+            title="Total de Pedidos" 
             value="1,245" 
             change="+8.3%" 
             icon={FiShoppingBag} 
           />
           <StatCard 
-            title="New Customers" 
+            title="Novos Clientes" 
             value="342" 
             change="+5.2%" 
             icon={FiUsers} 
@@ -437,7 +226,7 @@ const DashboardPage: React.FC = () => {
           {/* ✨ CARD COM DADOS REAIS DOS PRODUTOS */}
           <StatCard 
             title="Produtos Cadastrados" 
-            value={loading ? "Carregando..." : productCount.toString()}
+            value={loading ? "Carregando..." : totalProducts.toString()}
             change="+15.8%" 
             icon={FiPackage}
             isReal={true}
@@ -445,47 +234,15 @@ const DashboardPage: React.FC = () => {
           />
         </div>
 
-        {/* Seção de Valor do Estoque - SE TIVER PRODUTOS */}
-        {totalValue > 0 && (
-          <div className="mb-8">
-            <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">
-                    💼 Valor Total do Estoque
-                  </h3>
-                  <p className="text-3xl font-bold text-blue-700 dark:text-blue-300 mt-2">
-                    {formatCurrency(totalValue)}
-                  </p>
-                  <p className="text-blue-600 dark:text-blue-400 text-sm mt-1">
-                    Baseado em {productCount} produtos cadastrados
-                  </p>
-                </div>
-                <div className="p-4 bg-blue-100 dark:bg-blue-800 rounded-lg">
-                  <FiDollarSign size={32} className="text-blue-600 dark:text-blue-400" />
-                </div>
-              </div>
-              <div className="mt-4">
-                <button 
-                  onClick={() => window.location.href = '/products'}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Ver Produtos
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Charts */}
         <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Revenue Overview</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Visão Geral da Receita</h2>
               <select className="focus:ring-primary-500 rounded-md border-0 bg-gray-100 dark:bg-gray-800 text-sm focus:ring-2 text-gray-900 dark:text-white">
-                <option>Last 7 days</option>
-                <option>Last 30 days</option>
-                <option>Last 3 months</option>
+                <option>Ultimos 7 dias</option>
+                <option>Ultimos 30 dias</option>
+                <option>Ultimos 3 meses</option>
               </select>
             </div>
             <div className="h-80">
@@ -495,11 +252,11 @@ const DashboardPage: React.FC = () => {
 
           <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Sales Overview</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Visão Geral de Vendas</h2>
               <select className="focus:ring-primary-500 rounded-md border-0 bg-gray-100 dark:bg-gray-800 text-sm focus:ring-2 text-gray-900 dark:text-white">
-                <option>Last 7 days</option>
-                <option>Last 30 days</option>
-                <option>Last 3 months</option>
+                <option>Ultimos 7 dias</option>
+                <option>Ultimos 30 dias</option>
+                <option>Ultimos 3 meses</option>
               </select>
             </div>
             <div className="h-80">
@@ -511,9 +268,9 @@ const DashboardPage: React.FC = () => {
         {/* Recent Orders */}
         <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm">
           <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Orders</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Pedidos Recentes</h2>
             <button className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-sm font-medium">
-              View All
+              Ver tudo
             </button>
           </div>
           <div className="overflow-x-auto">
@@ -521,16 +278,16 @@ const DashboardPage: React.FC = () => {
               <thead>
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Order ID
+                    ID do Pedido
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Customer
+                    Cliente
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Date
+                    Data
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Amount
+                    Quantidade  
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     Status

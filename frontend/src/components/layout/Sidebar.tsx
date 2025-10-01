@@ -64,12 +64,12 @@ const sidebarItems: SidebarItem[] = [
     icon: <FiTag />, // Importe: import { FiTag } from 'react-icons/fi'
   },
   {
-    title: 'Customers',
+    title: 'Clientes',
     href: '/customers',
     icon: <FiUsers className="size-5" />,
   },
   {
-    title: 'Orders',
+    title: 'Pedidos',
     href: '/orders',
     icon: <FiFileText className="size-5" />,
   },
@@ -79,7 +79,7 @@ const sidebarItems: SidebarItem[] = [
     icon: <FiPieChart className="size-5" />,
   },
   {
-    title: 'Settings',
+    title: 'Configurações',
     href: '/settings',
     icon: <FiSettings className="size-5" />,
   },
