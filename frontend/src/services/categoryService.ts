@@ -27,10 +27,10 @@ export interface UpdateCategoryDto {
 // ✅ MOCK TEMPORÁRIO - Para testar a interface
 export const categoryService = {
   // Listar todas as categorias (MOCK + API)
-  async getAll(): Promise<Category[]> {
+  async getAll(search: string = ''): Promise<Category[]> {
     try {
       console.log('🚀 Tentando buscar da API...');
-      const response = await api.get('/Categories');
+      const response = await api.get(`/Categories?search=${search}`);
       console.log('📦 Resposta da API:', response.data);
       
       // Tenta extrair dados da API
@@ -39,7 +39,7 @@ export const categoryService = {
           id: item.id,
           name: item.name,
           description: item.description || '',
-          IsActive: item.IsActive || false,
+          isActive: item.IsActive || false,
           createdAt: new Date().toISOString()
         }));
         console.log('✅ Categorias da API:', apiCategories);

@@ -67,7 +67,7 @@ const EditCategoryPage = () => {
           await categoryService.update(formData.id, formData);
           
           console.log('✅ Categoria atualizada com sucesso');
-          router.push('/categories');
+          router.push('/categories?refresh=true');
         } catch (error) {
           console.error('❌ Erro ao atualizar categoria:', error);
           setError('Nao foi possivel atualizar a categoria. Tente novamente.');

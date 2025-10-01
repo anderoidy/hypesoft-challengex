@@ -153,22 +153,6 @@ public class Category : BaseEntity, IAggregateRoot
         SubCategories.Remove(subCategory);
     }
 
-    public void SetAsMainCategory(bool isMain, string? userId = null)
-    {
-        if (IsActive == isMain)
-            return;
-
-        if (!isMain && ParentCategoryId == null)
-            throw new InvalidOperationException(
-                "Uma categoria raiz deve ser uma categoria principal"
-            );
-
-        if (isMain)
-            Activate(userId ?? "system");
-        else
-            Deactivate(userId ?? "system");
-    }
-
     public void UpdateImage(string imageUrl, string? userId = null)
     {
         if (string.IsNullOrWhiteSpace(imageUrl))

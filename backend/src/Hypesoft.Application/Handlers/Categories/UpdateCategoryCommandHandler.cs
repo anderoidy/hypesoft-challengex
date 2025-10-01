@@ -70,7 +70,10 @@ namespace Hypesoft.Application.Handlers.Categories
                 );
 
                 // Atualiza IsActive baseado no IsActive do request
-                category.SetAsMainCategory(request.IsActive, request.ModifiedBy);
+                if (request.IsActive)
+                    category.Activate(request.ModifiedBy);
+                else
+                    category.Deactivate(request.ModifiedBy);
 
                 // Salva as alterações
                 var updated = await _categoryRepository.UpdateAsync(category, cancellationToken);

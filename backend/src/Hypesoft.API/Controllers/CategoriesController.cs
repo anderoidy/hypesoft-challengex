@@ -142,7 +142,7 @@ namespace Hypesoft.API.Controllers
         /// <param name="command">Dados atualizados da categoria</param>
         [HttpPut("{id:guid}")]
         //[Authorize(Roles = "Admin")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -164,7 +164,7 @@ namespace Hypesoft.API.Controllers
                 if (result.Status == ResultStatus.Invalid)
                     return BadRequest(result.ValidationErrors);
 
-                return NoContent();
+                return Ok(result.Value);
             }
             catch (Exception ex)
             {
